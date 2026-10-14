@@ -71,6 +71,7 @@ namespace PROJECT_SBV1.Forms
                 var lblFeat = new Label
                 {
                     Text = f,
+                    UseMnemonic = false,
                     Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                     ForeColor = Color.FromArgb(170, 180, 220),
                     AutoSize = true,
@@ -88,6 +89,7 @@ namespace PROJECT_SBV1.Forms
                 Padding = new Padding(60, 40, 60, 40)
             };
             Controls.Add(rightPanel);
+            rightPanel.SendToBack(); // Ensures rightPanel docks to the right of leftPanel without underlapping!
 
             var heading = new Label
             {
@@ -102,12 +104,14 @@ namespace PROJECT_SBV1.Forms
             var subHeading = new Label
             {
                 Text = "Enter your username and password to access the dashboard",
+                UseMnemonic = false,
                 Font = new Font("Segoe UI", 9f, FontStyle.Regular),
                 ForeColor = Color.FromArgb(142, 146, 188),
                 AutoSize = true,
                 Location = new Point(62, 85)
             };
             rightPanel.Controls.Add(subHeading);
+
 
             // Username Label & TextBox
             var lblUser = new Label
