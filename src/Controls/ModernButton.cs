@@ -24,7 +24,13 @@ namespace PROJECT_SBV1.Controls
             Cursor = Cursors.Hand;
             ForeColor = Color.White;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            SetStyle(
+                ControlStyles.UserPaint | 
+                ControlStyles.AllPaintingInWmPaint | 
+                ControlStyles.OptimizedDoubleBuffer | 
+                ControlStyles.SupportsTransparentBackColor, 
+                true);
+            UpdateStyles();
         }
 
         protected override void OnMouseEnter(EventArgs e)

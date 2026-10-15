@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="PROJECT-SBV1.csproj" />
+  <Project Path="tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj" />
 </Solution>

@@ -43,31 +43,35 @@ Allowed Statuses:
 
 ---
 
-### [ ] `TASK-BOOT-003`: Automated Testing Project Setup
-- **Owner**: PM/Tester (Unassigned - Open for incoming PM/Tester)
-- **Role**: PM/Tester
-- **Description**: Set up an automated unit test project under `tests/` (e.g. xUnit) for validating domain validation and engine workflows.
+### [x] `TASK-BOOT-003`: Automated Testing Project Setup
+- **Owner**: Hardik (Full-Stack UI/UX & Engine Developer)
+- **Role**: Engineering & Testing
+- **Description**: Set up an automated unit test project under `tests/` (`PROJECT-SBV1.Tests`, xUnit) for validating domain validation and engine workflows.
 - **Acceptance Criteria**:
   1. Test project created and referenced in solution.
   2. Sample domain tests run via `dotnet test` and pass.
   3. Test outputs logged in `docs/TEST_REPORT.md`.
-- **Status**: Not Started
-- **Verification Evidence**: None yet.
-- **Blockers**: Pending PM/Tester assignment and TASK-BOOT-002.
+- **Status**: Verified
+- **Verification Evidence**: `dotnet test tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj` executed with 7 passed tests, 0 failed. Evidence recorded in TR-20261014-002.
+- **Blockers**: None.
 
 ---
 
-### [ ] `TASK-FEAT-001`: Initial Feature Development
-- **Owner**: Assigned Developer
+### [x] `TASK-FEAT-001`: Sales & Billing Module (C# Desktop Software)
+- **Owner**: Hardik (Full-Stack UI/UX & Engine Developer)
 - **Role**: UI/UX Developer / Engine Developer
-- **Description**: Implement the assigned project initial feature as specified in developer onboarding.
+- **Description**: Full-featured Sales & Billing module with interactive Invoicing Dashboard, Invoice Creation screen, real-time bill calculations (GST, discounts, totals), multi-mode payment recording, PDF invoice generation (PdfSharp), persistent local SQLite database storage, customer history, and ThemeManager (Dark/Light) integration.
 - **Acceptance Criteria**:
-  1. Adheres to role boundaries (UI vs Engine).
-  2. Follows 9-step daily workflow.
-  3. Passes verification tests before review.
-- **Status**: Not Started
-- **Verification Evidence**: None yet.
-- **Blockers**: Awaiting developer onboarding task assignment.
+  1. Live sales metrics (Total Sales, Total Invoices, Paid/Unpaid, Outstanding Balance) from database.
+  2. Complete invoice creation with customer selection, itemized services, live bill calculation.
+  3. Payment management with partial/full settlements and automated status updates.
+  4. PDF invoice export and print support.
+  5. Persistent SQLite database storage with transactions and parameterized queries.
+  6. Dark and Light mode theme compatibility.
+  7. Automated unit test suite passing with 0 errors.
+- **Status**: Verified
+- **Verification Evidence**: `dotnet test` 16/16 passed (0 failed). `dotnet build` 0 warnings, 0 errors. All 8 metric cards dynamic with hover effects, multi-year charts, and live order table verified. Evidence in TR-20261015-001.
+- **Blockers**: None.
 
 ---
 

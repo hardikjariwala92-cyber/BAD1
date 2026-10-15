@@ -60,5 +60,8 @@ local_profile.json
 
 # Archives / Local files
 *.zip
+*.tar.gz
+*.db
+*.sqlite
 
 

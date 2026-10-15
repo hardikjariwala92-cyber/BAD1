@@ -11,9 +11,45 @@ namespace PROJECT_SBV1.Controls
 
         public ThemeToggle()
         {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            SetStyle(
+                ControlStyles.UserPaint | 
+                ControlStyles.AllPaintingInWmPaint | 
+                ControlStyles.OptimizedDoubleBuffer | 
+                ControlStyles.ResizeRedraw | 
+                ControlStyles.SupportsTransparentBackColor, 
+                true);
+            UpdateStyles();
+
             Size = new Size(64, 30);
             Cursor = Cursors.Hand;
+            BackColor = ThemeManager.Background;
+            ThemeManager.OnThemeChanged += HandleThemeChanged;
+        }
+
+        private void HandleThemeChanged(AppTheme theme)
+        {
+            BackColor = Parent?.BackColor != Color.Transparent && Parent?.BackColor != null && !Parent.BackColor.IsEmpty
+                ? Parent.BackColor
+                : ThemeManager.Background;
+            Invalidate();
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            if (Parent != null && Parent.BackColor != Color.Transparent && !Parent.BackColor.IsEmpty)
+            {
+                BackColor = Parent.BackColor;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ThemeManager.OnThemeChanged -= HandleThemeChanged;
+            }
+            base.Dispose(disposing);
         }
 
         protected override void OnClick(EventArgs e)
@@ -21,6 +57,15 @@ namespace PROJECT_SBV1.Controls
             base.OnClick(e);
             ThemeManager.ToggleTheme();
             Invalidate();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            Color bg = Parent?.BackColor != Color.Transparent && Parent?.BackColor != null && !Parent.BackColor.IsEmpty
+                ? Parent.BackColor
+                : ThemeManager.Background;
+            using var bgBrush = new SolidBrush(bg);
+            pevent.Graphics.FillRectangle(bgBrush, ClientRectangle);
         }
 
         protected override void OnPaint(PaintEventArgs e)

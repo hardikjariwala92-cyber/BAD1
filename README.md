@@ -1,123 +1,161 @@
-# TEAM-SOFT-SB1 — S TOM'S Project SBV1
+# BAD1 — S TOM'S Sales, Billing & Business Analytics Suite
 
-Welcome to **S TOM'S Project SBV1** (`TEAM-SOFT-SB1`), an AI-assisted, multi-developer Windows desktop application built with **.NET 8.0 Windows Forms**.
+[![.NET 8.0](https://img.shields.io/badge/.NET-8.0-blue.svg?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![C# 12](https://img.shields.io/badge/C%23-12-239120.svg?style=flat-square&logo=c-sharp)](https://docs.microsoft.com/en-us/dotnet/csharp/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20Desktop-informational.svg?style=flat-square&logo=windows)](https://microsoft.com/windows)
+[![Tests Passing](https://img.shields.io/badge/Tests-16%2F16%20Passing-brightgreen.svg?style=flat-square)](docs/TEST_REPORT.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-GitHub Repository: [https://github.com/Saumya25-hub/TEAM-SOFT-SB1](https://github.com/Saumya25-hub/TEAM-SOFT-SB1)
+**BAD1** is a modern, high-performance desktop enterprise software suite built with **.NET 8.0 Windows Forms** and **C# 12**. Designed with **Clean Architecture**, a state-of-the-art **Dark/Light Theme Engine**, and rich interactive visualizations, BAD1 provides businesses with full-featured sales invoicing, CRM customer management, inventory control, and real-time business intelligence analytics.
 
----
-
-## 📢 🎯 TODAY'S ACTIVE SPRINT (Assigned by PM & Vision)
-
-> [!IMPORTANT]
-> ### 🚀 Active Sprint: Splash Screen, Login Screen, & Dashboard Screen
-> **PM ne aaj ka task official assign kar diya hai!** 
-> 
-> All developers should check their role assignment below, start work on their feature branch, and push to GitHub!
-
-### 📌 Role Assignments for Today
-
-- **UI/UX Developer**:
-  - **Task**: `TASK-SPRINT-001` — **Splash, Login & Dashboard UI Presentation**
-  - **Scope**: User interface presentation, layout, visual hierarchy, styling, controls, and screen responsiveness for **Splash**, **Login**, and **Dashboard** WinForms.
-  - **Collaborative AI Directive**: When you open Antigravity on your PC, Antigravity will **NOT** dump code immediately. Antigravity will first ask you: *"Aapko Splash, Login, aur Dashboard ka visual theme, color palette, logo placement aur form layout kaisa chahiye?"* You guide the design, and Antigravity helps you implement it into WinForms controls and views cleanly.
-  - **Branch**: `feature/ui-splash-login-dashboard` ➔ push to GitHub!
-
-- **Engine Developer**:
-  - **Task**: `TASK-SPRINT-002` — **Auth, Session State & Navigation Engine Services**
-  - **Scope**: Core business logic, authentication service, credentials/token validation, user session state, and navigation workflow between Splash ➔ Login ➔ Dashboard.
-  - **Freedom of Implementation**: Write simple, robust C# logic with **no unnecessary restrictions** — follow Clean Architecture principles (Core models and interfaces separated from UI).
-  - **Collaborative AI Directive**: When you open Antigravity on your PC, Antigravity will first ask you: *"Auth validation, session state management aur navigation transition logic ka architecture kaisa design karna hai?"* You direct the logic, and Antigravity assists you in structuring the services and models.
-  - **Branch**: `feature/engine-auth-dashboard` ➔ verify with `dotnet test` ➔ push to GitHub!
-
-- **PM/Tester**:
-  - **Task**: `TASK-SPRINT-003` — **Splash, Login & Dashboard Verification**
-  - **Scope**: Verify acceptance criteria for Splash-to-Login transition, Login validation (valid/invalid credentials), and Dashboard landing.
-  - **Deliverable**: Record verification evidence in [docs/TEST_REPORT.md](file:///d:/TEAM%20LEAD%20SOFFWATRE/PROJECT-SBV1/docs/TEST_REPORT.md).
-
-### 🛠️ How to Start Work with Antigravity
-1. Open this repository in Antigravity IDE on your PC.
-2. Press `Ctrl + L` to open the Assistant chat.
-3. Type: *"Aaj ka task start karna hai"* or *"Mujhe Splash, Login aur Dashboard par kaam karna hai"*.
-4. Antigravity will recognize today's assignment from PM, ask for your design/architecture input, help you create your feature branch, write and refine the code with you, run builds/tests, and guide you to push your changes to GitHub!
+GitHub Repository: [https://github.com/hardikjariwala92-cyber/BAD1](https://github.com/hardikjariwala92-cyber/BAD1)
 
 ---
 
-## 1. Technology Stack
+## 🌟 Key Features
 
-- **Framework**: .NET 8.0 Windows Forms (`net8.0-windows`)
-- **Language**: C# 12
-- **IDE/SDK**: .NET SDK 8.0+ / 10.0+ (Visual Studio 2022 or VS Code)
-- **Architecture**: Clean Architecture (UI / Presentation, Core Domain, Engine Services, Infrastructure)
-- **Version Control**: Git & GitHub
+### 1. 📊 Dynamic Business Intelligence Dashboard
+- **8 Live Database-Backed Metric Cards**: Real-time sales, revenue, active customers, orders, growth velocity, and subscription metrics.
+- **Micro-Interactions & Hover Popups**: Smooth card elevation, glowing border highlights (`ThemeManager.AccentBlue`), and dynamic floating tooltips (`MetricHoverPopup`) displaying historical metrics, category breakdown, and growth badges.
+- **Interactive Multi-Year Charts**:
+  - **Sales Dynamics Bar Chart**: Anti-aliased vertical bar chart with glowing caps, gradient hover highlights, multi-year switching (`2021 ▼`, `2022 ▼`), and currency tooltips.
+  - **User Activity Spline Curve**: High-precision Bezier curve rendering with nearest-point mouse tracking, vertical dashed guides, and user engagement tooltips.
+  - **Donut Visualizers**: Multi-slice breakdown for active users and subscription tiers with 4px outward slice expansion on hover.
+
+### 2. 🎨 Modern CSS & Bootstrap 5 Styled Customer Orders Table
+- **Bootstrap 5 Table Dark Theme**: Seamless dark palette with `table-striped` alternating rows (`#191b26` vs `#14161f`) and subtle 1px dividers.
+- **Interactive `table-hover`**: Instant smooth row highlighting (`#282d46`) on mouse movement.
+- **Initials Avatar Badges**: Circular avatar badges in the `Profile` column displaying uppercase customer initials, dynamically color-coded by name hash across 6 vibrant palettes.
+- **Rounded-Pill Status Badges**: Authentic Bootstrap `.badge rounded-pill` tags with glowing indicator dots:
+  - 🟢 **Delivered**: Emerald green badge (`#163428` bg, `#10b981` border, `#34d399` text)
+  - 🟡 **Processed**: Amber warning badge (`#342a12` bg, `#f59e0b` border, `#fbbf24` text)
+  - 🔴 **Cancelled**: Crimson red badge (`#34181c` bg, `#ef4444` border, `#f87171` text)
+- **Live Filtering & Search**: Instant customer/city search box, flat dark owner-drawn status filter dropdown, and 15-second background auto-refresh timer.
+
+### 3. 🧾 Invoice & Billing Management Engine
+- **Itemized Billing Grid**: Add, update, and manage services and products with instant quantity, unit price, and subtotal calculations.
+- **Financial Calculations**: Automated subtotal, discount, GST/sales tax calculation, and net payable summaries.
+- **PDF Generation & Export**: Generate clean, professional PDF invoices directly with embedded company branding and customer billing details (`InvoicePdfService`).
+- **Payment Tracking**: Record partial and full payments with method tracking (Cash, UPI, Bank Transfer, Card) via `RecordPaymentDialog`.
+
+### 4. 👥 Customer Relationship Management (CRM)
+- Customer profiles with addresses, contact information, outstanding balances, and credit limits.
+- Complete customer transaction history dialog (`CustomerHistoryDialog`) showing previous invoices and ledger entries.
+
+### 5. 📦 Product & Inventory Management
+- Product catalog management with SKU, pricing, category classifications, and inventory statuses.
+
+### 6. 🌓 Seamless Dark & Light Theme System
+- Built-in `ThemeManager` with curated high-contrast color tokens.
+- Instant toggle between dark mode and light mode without reloading views.
 
 ---
 
-## 2. Solution Structure
+## 🏗️ Architecture & Solution Structure
+
+BAD1 is architected following **Clean Architecture** principles to separate UI presentation from business logic and data persistence:
 
 ```text
-PROJECT-SBV1/
+BAD1/
 ├── src/
-│   ├── PROJECT-SBV1.App/              # UI layer: WinForms, Controls, ViewModels, Resources
-│   ├── PROJECT-SBV1.Core/             # Pure Domain Models, Interfaces, Validation logic
-│   ├── PROJECT-SBV1.Engine/           # Business Workflows, Processing Engines, Service implementations
-│   └── PROJECT-SBV1.Infrastructure/   # Data Access, Persistence, Hardware/IO configuration
+│   ├── Controls/                      # Custom GDI+ UI Components
+│   │   ├── BarChartControl.cs         # Dynamic interactive sales bar chart
+│   │   ├── SplineChartControl.cs      # Smooth user activity curve chart
+│   │   ├── DonutChartControl.cs       # Interactive donut visualizer
+│   │   ├── RoundedPanel.cs            # Rounded card with elevation & hover glow
+│   │   ├── MetricHoverPopup.cs        # Non-activating floating metric tooltip
+│   │   ├── ModernButton.cs            # Custom styled button with hover states
+│   │   └── ThemeToggle.cs             # Animated theme toggle switch
+│   ├── Forms/                         # WinForms UI Presentation Layer
+│   │   ├── DashboardForm.cs           # Main maximized dashboard & navigation shell
+│   │   ├── InvoiceForm.cs             # Full-screen responsive invoice editor
+│   │   ├── BusinessProfileDialog.cs   # Business profile configuration modal
+│   │   ├── CustomerHistoryDialog.cs   # Customer ledger & invoice history modal
+│   │   └── RecordPaymentDialog.cs     # Payment recording dialog
+│   ├── Models/                        # Core Domain Models & Transfer Objects
+│   │   ├── Invoice.cs / InvoiceItem.cs# Invoicing domain entities
+│   │   ├── Customer.cs                # CRM customer model
+│   │   ├── Product.cs                 # Inventory product model
+│   │   ├── Payment.cs                 # Payment transaction entity
+│   │   ├── MetricDetailInfo.cs        # Hover tooltip metric metadata
+│   │   └── SalesDashboardMetrics.cs   # Summary metric models
+│   └── Services/                      # Application Business Logic & Persistence
+│       ├── DatabaseService.cs         # SQLite persistence & database operations
+│       ├── BillingDataService.cs      # Billing calculations & workflow service
+│       ├── ProductService.cs          # Product catalog management
+│       └── InvoicePdfService.cs       # Professional PDF invoice generator
 ├── tests/
-│   └── PROJECT-SBV1.Core.Tests/       # Unit & Integration Tests
-├── docs/
-│   ├── TEAM_ROSTER.md                 # Dynamic team roster & authorization policy
-│   ├── AUDIT_LOG.md                   # Project action, review, & security audit log
-│   ├── BACKUP_GUIDE.md                # Backup, recovery, & machine replacement guide
-│   ├── TASKS.md                       # Structured task backlog & verification tracking
-│   └── TEST_REPORT.md                 # Test execution logs & verification evidence
+│   └── PROJECT-SBV1.Tests/            # Comprehensive automated test suite (16 tests)
+│       ├── SalesAndBillingTests.cs    # Billing, invoices & form initialization tests
+│       └── DynamicDashboardHoverTests.cs # Charts, hover popups & metrics tests
+├── docs/                              # Project documentation & logs
+│   ├── TASKS.md                       # Task backlog & progress tracking
+│   ├── TEST_REPORT.md                 # Test execution logs & verification evidence
+│   └── TEAM_ROSTER.md                 # Team roles & governance
 ├── scripts/
-│   └── onboard.ps1                    # Local machine profile & Windows DPAPI setup tool
-├── .team/
-│   ├── profile.md                     # Host developer profile (Name, Role, Language, Task)
-│   └── WORKLOG.md                     # Work session log (Git diffs, tests, progress)
-├── .gitignore                         # Standard .NET / Visual Studio ignore rules
-├── AGENTS.md                          # Antigravity agent workspace rules & onboarding protocol
-├── README.md                          # Repository overview & setup guide
-├── TEAM_RULES.md                      # Team engineering standards, clean architecture, workflows
+│   └── setup_database.sql             # Database schema initialization script
+├── .gitignore                         # Build artifact and secret exclusion rules
+├── README.md                          # Repository documentation
 └── PROJECT-SBV1.slnx                  # Solution configuration
 ```
 
 ---
 
-## 3. Quick Start & Build Instructions
-
-### 🚀 Developer Onboarding (First-Time Setup)
-> [!TIP]
-> **New Developer?** When you open this workspace in Antigravity IDE, press `Ctrl + L` to open the Agent sidebar and type `hello` (or any greeting). The S TOM'S AI Assistant will greet you with **"Welcome to S TOM'S Team!"** and guide you conversationally through your role, language, and initial task setup.
+## 🚀 Getting Started
 
 ### Prerequisites
-- Install [.NET 8.0 SDK](https://dotnet.microsoft.com/download) or higher.
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or higher.
+- Windows 10 / Windows 11.
 - Git for Windows.
 
-### Build
-From the repository root, run:
-```powershell
-dotnet build
-```
+### Installation & Setup
 
-### Run
-Launch the application:
-```powershell
-dotnet run --project PROJECT-SBV1.csproj
-```
+1. **Clone the repository**:
+   ```powershell
+   git clone https://github.com/hardikjariwala92-cyber/BAD1.git
+   cd BAD1
+   ```
 
-### Run Tests
-```powershell
-dotnet test
-```
+2. **Restore dependencies & build**:
+   ```powershell
+   dotnet build
+   ```
+
+3. **Run automated unit tests**:
+   ```powershell
+   dotnet test
+   ```
+   *All 16 unit tests will execute and pass with 0 errors.*
+
+4. **Launch the application**:
+   ```powershell
+   dotnet run --project PROJECT-SBV1.csproj
+   ```
 
 ---
 
-## 4. Team Workflow & Contribution Rules
+## 🧪 Testing & Quality Assurance
 
-All team members must follow the standards defined in [TEAM_RULES.md](file:///d:/TEAM%20LEAD%20SOFFWATRE/PROJECT-SBV1/TEAM_RULES.md):
-- **Feature Branches**: Never commit directly to `main`. Create feature branches like `feature/ui-form1-redesign` or `feature/engine-calc`.
-- **Clean Architecture**: Adhere strictly to layer separation (UI does not query databases; Engine does not manipulate UI components).
-- **Session Logging**: Update [docs/TASKS.md](file:///d:/TEAM%20LEAD%20SOFFWATRE/PROJECT-SBV1/docs/TASKS.md) and [.team/WORKLOG.md](file:///d:/TEAM%20LEAD%20SOFFWATRE/PROJECT-SBV1/.team/WORKLOG.md) before concluding each work session.
-- **Verification First**: Never mark a task `Done` without build/test verification proof in [docs/TEST_REPORT.md](file:///d:/TEAM%20LEAD%20SOFFWATRE/PROJECT-SBV1/docs/TEST_REPORT.md).
+All features are covered by automated unit and integration tests located in `tests/PROJECT-SBV1.Tests`:
 
+| Test Suite | Tests | Result | Description |
+| :--- | :---: | :---: | :--- |
+| `SalesAndBillingTests` | 9 | **PASS** | Form maximization, invoice calculations, layout responsiveness |
+| `DynamicDashboardHoverTests` | 7 | **PASS** | Dynamic metric models, interactive charts, hover popups, multi-year SQLite queries |
+| **Total** | **16** | **100% PASS** | Zero warnings, zero errors |
 
+Verification logs are recorded in [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md).
+
+---
+
+## 👨‍💻 Author & Maintainer
+
+- **Developer**: Hardik Jariwala
+- **GitHub**: [@hardikjariwala92-cyber](https://github.com/hardikjariwala92-cyber)
+- **Role**: Full-Stack UI/UX & Engine Developer
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
