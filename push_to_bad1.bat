@@ -1,12 +1,12 @@
 @echo off
-setlocal enabledelayedexpansion
-title BAD1 - GitHub Repository Push & Sync Tool
+setlocal EnableDelayedExpansion
+title BAD1 - GitHub Repository Push and Sync Tool
 color 0B
 
 cd /d "%~dp0"
 
 echo ======================================================================
-echo           BAD1 - Sales, Billing & Business Analytics Suite
+echo           BAD1 - Sales, Billing and Business Analytics Suite
 echo              GitHub Automated Push and Repository Sync
 echo ======================================================================
 echo.
@@ -26,9 +26,9 @@ if %ERRORLEVEL% neq 0 (
 )
 
 :: 2. Ensure remote 'bad1' is configured
-git remote | findstr /i "^bad1$" >nul 2>nul
+git remote | findstr /i "bad1" >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo [*] Adding remote 'bad1' (https://github.com/hardikjariwala92-cyber/BAD1.git)...
+    echo [*] Adding remote 'bad1' - https://github.com/hardikjariwala92-cyber/BAD1.git
     git remote add bad1 https://github.com/hardikjariwala92-cyber/BAD1.git
 ) else (
     echo [OK] Remote 'bad1' is configured.
@@ -43,14 +43,19 @@ echo.
 echo ----------------------------------------------------------------------
 echo Select a push option:
 echo ----------------------------------------------------------------------
-echo  [1] Push 'main' branch (Recommended - replaces initial placeholder)
-echo  [2] Push ALL branches ('main', 'feature/sales-billing', etc.)
-echo  [3] Push current active branch (!CURRENT_BRANCH!) to bad1
-echo  [4] Make 'bad1' the primary 'origin' remote and push
+echo  [1] Push 'main' branch - Replaces initial placeholder with full app
+echo  [2] Push ALL branches - main, feature branches, etc.
+echo  [3] Push current active branch [!CURRENT_BRANCH!] to bad1
+echo  [4] Make 'bad1' the primary 'origin' remote and push main
 echo  [5] Check Git status and remotes
 echo  [6] Exit
 echo ----------------------------------------------------------------------
-set /p ACTION="Enter choice (1-6) [default: 1]: "
+
+if "%~1"=="" (
+    set /p ACTION="Enter choice 1-6 [default: 1]: "
+) else (
+    set ACTION=%~1
+)
 
 if "%ACTION%"=="" set ACTION=1
 
@@ -67,7 +72,7 @@ goto PUSH_MAIN
 :PUSH_MAIN
 echo.
 echo ======================================================================
-echo Pushing 'main' branch to bad1 (https://github.com/hardikjariwala92-cyber/BAD1.git)...
+echo Pushing 'main' branch to bad1 repo...
 echo ======================================================================
 echo.
 git push -u bad1 main --force
@@ -76,7 +81,7 @@ goto CHECK_RESULT
 :PUSH_ALL
 echo.
 echo ======================================================================
-echo Pushing ALL branches to bad1...
+echo Pushing ALL branches to bad1 repo...
 echo ======================================================================
 echo.
 git push --all bad1 --force
@@ -85,7 +90,7 @@ goto CHECK_RESULT
 :PUSH_CURRENT
 echo.
 echo ======================================================================
-echo Pushing '!CURRENT_BRANCH!' branch to bad1...
+echo Pushing branch '!CURRENT_BRANCH!' to bad1 repo...
 echo ======================================================================
 echo.
 git push -u bad1 !CURRENT_BRANCH! --force
@@ -139,9 +144,9 @@ if %ERRORLEVEL% equ 0 (
     echo If GitHub Credential Manager opened a browser popup, please sign in.
     echo.
     echo Troubleshooting:
-    echo 1. If a browser window opened, click "Sign in with your browser".
+    echo 1. If a browser window opened, click Sign in with your browser.
     echo 2. If prompted for password in terminal, enter a GitHub Personal
-    echo    Access Token (PAT) with 'repo' scope from:
+    echo    Access Token with 'repo' scope from:
     echo    https://github.com/settings/tokens
     echo 3. Refer to docs\PUSH_TO_BAD1_GUIDE.md for step-by-step instructions.
     echo ======================================================================
