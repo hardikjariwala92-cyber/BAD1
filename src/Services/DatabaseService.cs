@@ -71,22 +71,26 @@ namespace PROJECT_SBV1.Services
                 new Product(6, "Real-time Telemetry Dashboard", "Hardware & IoT", 920.00m, 60, "Active")
             });
 
-            // Seed Orders (Matching reference image)
+            // Seed Orders (Matching reference image + additional for scrolling & search tests)
             _demoOrders.AddRange(new[]
             {
-                new CustomerOrder("Press", "London", "22.08.2022", "Delivered", "$920"),
-                new CustomerOrder("Marina", "Man city", "24.08.2022", "Processed", "$452"),
-                new CustomerOrder("Alex", "Unknown", "15.08.2022", "Cancelled", "$1200"),
-                new CustomerOrder("Robert", "New York", "03.08.2022", "Delivered", "$1235"),
-                new CustomerOrder("Sophia", "Berlin", "28.08.2022", "Delivered", "$850"),
-                new CustomerOrder("Liam", "Toronto", "30.08.2022", "Processed", "$640")
+                new CustomerOrder("Press", "London", "22.08.2022", "Delivered", "₹920"),
+                new CustomerOrder("Marina", "Man city", "24.08.2022", "Processed", "₹452"),
+                new CustomerOrder("Alex", "Unknown", "15.08.2022", "Cancelled", "₹1,200"),
+                new CustomerOrder("Robert", "New York", "03.08.2022", "Delivered", "₹1,235"),
+                new CustomerOrder("Sophia", "Berlin", "28.08.2022", "Delivered", "₹850"),
+                new CustomerOrder("Liam", "Toronto", "30.08.2022", "Processed", "₹640"),
+                new CustomerOrder("Daniel", "Chicago", "25.08.2022", "Delivered", "₹1,450"),
+                new CustomerOrder("Emma", "Paris", "21.08.2022", "Processed", "₹780"),
+                new CustomerOrder("Lucas", "Madrid", "19.08.2022", "Delivered", "₹1,120"),
+                new CustomerOrder("Olivia", "Sydney", "18.08.2022", "Cancelled", "₹540")
             });
 
             // Seed Messages
             _demoMessages.AddRange(new[]
             {
-                new NotificationMessage(1, "System Monitoring", "Monthly Sales Target Exceeded", "August sales dynamics reached $302,562.23 surpassing forecast by 8.2%.", false, DateTime.Now.AddMinutes(-25)),
-                new NotificationMessage(2, "Payment Gateway", "Fund Settlement Processed", "Funds received settlement of $150,256.23 cleared successfully to primary bank account.", false, DateTime.Now.AddHours(-3)),
+                new NotificationMessage(1, "System Monitoring", "Monthly Sales Target Exceeded", "August sales dynamics reached ₹3,02,562.23 surpassing forecast by 8.2%.", false, DateTime.Now.AddMinutes(-25)),
+                new NotificationMessage(2, "Payment Gateway", "Fund Settlement Processed", "Funds received settlement of ₹1,50,256.23 cleared successfully to primary bank account.", false, DateTime.Now.AddHours(-3)),
                 new NotificationMessage(3, "Support Desk", "Customer Ticket #4890 Resolved", "Customer Press verified delivery of invoice items and confirmed receipt.", true, DateTime.Now.AddDays(-1)),
                 new NotificationMessage(4, "Security Guard", "New Session from Visual Studio", "User Kristi Kamlykova signed in successfully from local desktop workstation.", true, DateTime.Now.AddDays(-2))
             });
@@ -94,7 +98,7 @@ namespace PROJECT_SBV1.Services
             // Seed Settings
             _demoSettings["Theme"] = "Dark";
             _demoSettings["CompanyName"] = "Business Analytics Inc.";
-            _demoSettings["CurrencySymbol"] = "$";
+            _demoSettings["CurrencySymbol"] = "₹";
             _demoSettings["DefaultDateRange"] = "01.08.2022 - 31.08.2022";
         }
 
@@ -318,6 +322,19 @@ namespace PROJECT_SBV1.Services
             return queryDemo.OrderBy(p => p.Name).ToList();
         }
 
+        public async Task<Product?> GetProductByBarcodeAsync(string barcode)
+        {
+            if (string.IsNullOrWhiteSpace(barcode)) return null;
+            string clean = barcode.Trim();
+            var all = await GetProductsAsync();
+            return all.FirstOrDefault(p =>
+                string.Equals(p.Barcode, clean, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(p.ProductId.ToString(), clean, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals($"PRD-{p.ProductId:D3}", clean, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals($"P{p.ProductId:D3}", clean, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(p.Name, clean, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task<bool> AddProductAsync(Product product)
         {
             if (!IsDemoMode)
@@ -351,6 +368,10 @@ namespace PROJECT_SBV1.Services
             }
 
             product.ProductId = _demoProducts.Count > 0 ? _demoProducts.Max(p => p.ProductId) + 1 : 1;
+            if (string.IsNullOrWhiteSpace(product.Barcode))
+            {
+                product.Barcode = $"890123400{product.ProductId:D3}";
+            }
             _demoProducts.Add(product);
             return true;
         }
@@ -391,6 +412,7 @@ namespace PROJECT_SBV1.Services
                 existing.Price = product.Price;
                 existing.StockQuantity = product.StockQuantity;
                 existing.Status = product.Status;
+                existing.Barcode = string.IsNullOrWhiteSpace(product.Barcode) ? existing.Barcode : product.Barcode;
                 return true;
             }
             return false;
@@ -508,7 +530,7 @@ namespace PROJECT_SBV1.Services
         #endregion
 
         #region Orders & Analytics Data Access
-        public async Task<List<CustomerOrder>> GetOrdersAsync(string? search = null, string? statusFilter = null)
+        public async Task<List<CustomerOrder>> GetOrdersAsync(string? search = null, string? statusFilter = null, DateTime? startDate = null, DateTime? endDate = null)
         {
             if (!IsDemoMode)
             {
@@ -518,14 +540,18 @@ namespace PROJECT_SBV1.Services
                     using var conn = new SqlConnection(ConnectionString);
                     await conn.OpenAsync();
 
-                    string query = "SELECT CustomerName, Address, CONVERT(VARCHAR, OrderDate, 104) AS OrderDate, Status, '$' + CAST(CAST(TotalAmount AS INT) AS VARCHAR) AS Price FROM dbo.Orders WHERE 1=1";
-                    if (!string.IsNullOrWhiteSpace(search)) query += " AND (CustomerName LIKE @search OR Address LIKE @search)";
+                    string query = "SELECT CustomerName, Address, CONVERT(VARCHAR, OrderDate, 104) AS OrderDate, Status, N'₹' + CAST(CAST(TotalAmount AS INT) AS VARCHAR) AS Price FROM dbo.Orders WHERE 1=1";
+                    if (!string.IsNullOrWhiteSpace(search)) query += " AND (CustomerName LIKE @search OR Address LIKE @search OR Status LIKE @search OR Price LIKE @search)";
                     if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All") query += " AND Status = @status";
+                    if (startDate.HasValue) query += " AND OrderDate >= @startDate";
+                    if (endDate.HasValue) query += " AND OrderDate <= @endDate";
                     query += " ORDER BY OrderDate DESC";
 
                     using var cmd = new SqlCommand(query, conn);
                     if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("@search", $"%{search}%");
                     if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All") cmd.Parameters.AddWithValue("@status", statusFilter);
+                    if (startDate.HasValue) cmd.Parameters.AddWithValue("@startDate", startDate.Value.Date);
+                    if (endDate.HasValue) cmd.Parameters.AddWithValue("@endDate", endDate.Value.Date.AddDays(1).AddTicks(-1));
 
                     using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
@@ -550,14 +576,121 @@ namespace PROJECT_SBV1.Services
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string s = search.ToLowerInvariant();
-                queryDemo = queryDemo.Where(o => o.ProfileName.ToLowerInvariant().Contains(s) || o.Address.ToLowerInvariant().Contains(s));
+                queryDemo = queryDemo.Where(o => 
+                    o.ProfileName.ToLowerInvariant().Contains(s) || 
+                    o.Address.ToLowerInvariant().Contains(s) ||
+                    o.Status.ToLowerInvariant().Contains(s) ||
+                    o.Price.ToLowerInvariant().Contains(s) ||
+                    o.OrderDate.ToLowerInvariant().Contains(s));
             }
             if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
             {
                 queryDemo = queryDemo.Where(o => o.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase));
             }
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                queryDemo = queryDemo.Where(o =>
+                {
+                    if (DateTime.TryParseExact(o.OrderDate, "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+                    {
+                        if (startDate.HasValue && dt.Date < startDate.Value.Date) return false;
+                        if (endDate.HasValue && dt.Date > endDate.Value.Date) return false;
+                        return true;
+                    }
+                    return true;
+                });
+            }
             return queryDemo.ToList();
         }
+
+        public async Task<bool> UpdateOrderStatusAsync(string profileName, string newStatus)
+        {
+            if (!IsDemoMode)
+            {
+                try
+                {
+                    using var conn = new SqlConnection(ConnectionString);
+                    await conn.OpenAsync();
+                    string sql = "UPDATE dbo.Orders SET Status = @status WHERE CustomerName = @name";
+                    using var cmd = new SqlCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("@status", newStatus);
+                    cmd.Parameters.AddWithValue("@name", profileName);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch
+                {
+                    // Fallback to in-memory demo collection
+                }
+            }
+
+            var order = _demoOrders.FirstOrDefault(o => o.ProfileName.Equals(profileName, StringComparison.OrdinalIgnoreCase));
+            if (order != null)
+            {
+                order.Status = newStatus;
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<string> ToggleOrderStatusAsync(string profileName)
+        {
+            var order = _demoOrders.FirstOrDefault(o => o.ProfileName.Equals(profileName, StringComparison.OrdinalIgnoreCase));
+            if (order == null) return "Delivered";
+
+            string nextStatus = order.Status switch
+            {
+                "Delivered" => "Processed",
+                "Processed" => "Cancelled",
+                "Cancelled" => "Delivered",
+                _ => "Delivered"
+            };
+
+            await UpdateOrderStatusAsync(profileName, nextStatus);
+            return nextStatus;
+        }
+
+        public async Task<bool> AddOrderAsync(CustomerOrder order)
+        {
+            if (!order.Price.StartsWith("₹"))
+            {
+                string cleanPrice = order.Price.Replace("$", "").Trim();
+                order.Price = "₹" + cleanPrice;
+            }
+
+            if (!IsDemoMode)
+            {
+                try
+                {
+                    using var conn = new SqlConnection(ConnectionString);
+                    await conn.OpenAsync();
+                    string sql = "INSERT INTO dbo.Orders (CustomerName, Address, OrderDate, Status, TotalAmount) VALUES (@name, @addr, @orderDate, @status, @amt)";
+                    using var cmd = new SqlCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("@name", order.ProfileName);
+                    cmd.Parameters.AddWithValue("@addr", order.Address);
+                    cmd.Parameters.AddWithValue("@status", order.Status);
+
+                    DateTime orderDate = DateTime.Now;
+                    if (DateTime.TryParseExact(order.OrderDate, "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                    {
+                        orderDate = parsedDate;
+                    }
+                    cmd.Parameters.AddWithValue("@orderDate", orderDate);
+
+                    decimal amt = decimal.TryParse(order.Price.Replace("₹", "").Replace("$", "").Replace(",", "").Trim(), out var val) ? val : 100m;
+                    cmd.Parameters.AddWithValue("@amt", amt);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DatabaseService] SQL Insert Order error: {ex.Message}");
+                    // Fallback to in-memory demo collection
+                }
+            }
+
+            _demoOrders.Insert(0, order);
+            return true;
+        }
+
 
         public AnalyticsSummary GetAnalyticsSummary()
         {
@@ -572,15 +705,15 @@ namespace PROJECT_SBV1.Services
                 ApprovedTrendPositive = true,
                 TotalUsers = "4.890",
                 ActiveSubscriptions = "1.201",
-                MonthTotal = 25410,
+                MonthTotal = 1164084,
                 MonthTotalTrend = "↓ 0.2% since last month",
                 MonthTotalTrendPositive = false,
                 Revenue = 1352,
                 RevenueTrend = "↓ 1.2% since last month",
                 RevenueTrendPositive = false,
-                PaidInvoices = "$30256.23",
+                PaidInvoices = "₹1,21,745.00",
                 PaidInvoicesBadge = "+15%",
-                FundsReceived = "$150256.23",
+                FundsReceived = "₹1,50,256.23",
                 FundsReceivedBadge = "+59%"
             };
         }

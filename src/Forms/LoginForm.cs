@@ -16,6 +16,14 @@ namespace PROJECT_SBV1.Forms
             InitializeComponent();
         }
 
+        public void SetUsername(string username)
+        {
+            if (_txtUsername != null)
+            {
+                _txtUsername.Text = username;
+            }
+        }
+
         private void OnKeyDownSubmit(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)

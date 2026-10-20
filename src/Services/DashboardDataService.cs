@@ -8,12 +8,12 @@ namespace PROJECT_SBV1.Services
         {
             return new List<CustomerOrder>
             {
-                new("Press", "London", "22.08.2022", "Delivered", "$920"),
-                new("Marina", "Man city", "24.08.2022", "Processed", "$452"),
-                new("Alex", "Unknown", "15.08.2022", "Cancelled", "$1200"),
-                new("Robert", "New York", "03.08.2022", "Delivered", "$1235"),
-                new("Sophia", "Berlin", "28.08.2022", "Delivered", "$850"),
-                new("Liam", "Toronto", "30.08.2022", "Processed", "$640")
+                new("Press", "London", "22.08.2022", "Delivered", "₹920"),
+                new("Marina", "Man city", "24.08.2022", "Processed", "₹452"),
+                new("Alex", "Unknown", "15.08.2022", "Cancelled", "₹1,200"),
+                new("Robert", "New York", "03.08.2022", "Delivered", "₹1,235"),
+                new("Sophia", "Berlin", "28.08.2022", "Delivered", "₹850"),
+                new("Liam", "Toronto", "30.08.2022", "Processed", "₹640")
             };
         }
 

@@ -96,28 +96,36 @@ namespace PROJECT_SBV1.Models
             GrandTotal = Math.Round(TaxableAmount + TaxAmount, 2);
 
             // Re-calculate payments
-            AmountPaid = Math.Round(Payments.Sum(p => p.Amount), 2);
+            if (Payments.Count > 0)
+            {
+                AmountPaid = Math.Round(Payments.Sum(p => p.Amount), 2);
+            }
             BalanceDue = Math.Max(0m, Math.Round(GrandTotal - AmountPaid, 2));
 
-            // Automatically determine status
-            if (Status != "Cancelled" && Status != "Draft")
+            // Automatically determine status according to business rules
+            if (Status == "Cancelled")
             {
-                if (GrandTotal > 0 && AmountPaid >= GrandTotal)
-                {
-                    Status = "Paid";
-                }
-                else if (AmountPaid > 0 && AmountPaid < GrandTotal)
-                {
-                    Status = "Partially Paid";
-                }
-                else if (DueDate < DateTime.Today && AmountPaid < GrandTotal)
-                {
-                    Status = "Overdue";
-                }
-                else
-                {
-                    Status = "Unpaid";
-                }
+                // Cancelled status is preserved
+            }
+            else if (GrandTotal > 0 && AmountPaid >= GrandTotal)
+            {
+                Status = "Paid";
+            }
+            else if (AmountPaid > 0 && AmountPaid < GrandTotal)
+            {
+                Status = "Partially Paid";
+            }
+            else if (Status == "Draft")
+            {
+                // Draft status is preserved when no payment has been recorded
+            }
+            else if (DueDate.Date < DateTime.Today.Date && BalanceDue > 0)
+            {
+                Status = "Overdue";
+            }
+            else
+            {
+                Status = "Unpaid";
             }
         }
     }

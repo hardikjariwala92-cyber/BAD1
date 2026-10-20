@@ -1,4 +1,6 @@
+using System;
 using System.Drawing;
+using System.IO;
 
 namespace PROJECT_SBV1.Theme
 {
@@ -10,13 +12,81 @@ namespace PROJECT_SBV1.Theme
 
     public static class ThemeManager
     {
-        public static AppTheme CurrentTheme { get; private set; } = AppTheme.Dark;
+        private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "theme_settings.json");
+        private static readonly string LocalAppDataFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "STOMS", "theme_settings.json");
+
+        public static AppTheme CurrentTheme { get; private set; } = LoadSavedTheme();
 
         public static event Action<AppTheme>? OnThemeChanged;
+
+        private static AppTheme LoadSavedTheme()
+        {
+            try
+            {
+                string? path = null;
+                if (File.Exists(LocalAppDataFilePath))
+                {
+                    path = LocalAppDataFilePath;
+                }
+                else if (File.Exists(SettingsFilePath))
+                {
+                    path = SettingsFilePath;
+                }
+
+                if (path != null)
+                {
+                    string content = File.ReadAllText(path).Trim();
+                    if (content.Contains("Light", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return AppTheme.Light;
+                    }
+                    if (content.Contains("Dark", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return AppTheme.Dark;
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback to default
+            }
+
+            return AppTheme.Dark;
+        }
+
+        public static void SaveTheme(AppTheme theme)
+        {
+            try
+            {
+                string json = $"{{\n  \"Theme\": \"{theme}\"\n}}";
+
+                // Save to BaseDirectory (near executable)
+                try
+                {
+                    File.WriteAllText(SettingsFilePath, json);
+                }
+                catch { }
+
+                // Save to %LOCALAPPDATA%\STOMS
+                try
+                {
+                    string dir = Path.GetDirectoryName(LocalAppDataFilePath)!;
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                    File.WriteAllText(LocalAppDataFilePath, json);
+                }
+                catch { }
+            }
+            catch
+            {
+                // Failsafe silent fallback
+            }
+        }
 
         public static void SetTheme(AppTheme theme)
         {
             CurrentTheme = theme;
+            SaveTheme(theme);
             OnThemeChanged?.Invoke(CurrentTheme);
         }
 

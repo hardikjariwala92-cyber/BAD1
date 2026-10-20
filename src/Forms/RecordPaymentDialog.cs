@@ -184,17 +184,18 @@ namespace PROJECT_SBV1.Forms
             {
                 if (!decimal.TryParse(_txtAmount.Text, out decimal amount) || amount <= 0)
                 {
-                    MessageBox.Show("Please enter a valid positive payment amount.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Please enter a valid positive payment amount greater than zero.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     _txtAmount.Focus();
                     return;
                 }
 
                 if (amount > _invoice.BalanceDue)
                 {
-                    var confirm = MessageBox.Show(
-                        $"The entered amount (₹{amount:N2}) exceeds the current balance due (₹{_invoice.BalanceDue:N2}). Do you want to record this excess payment?",
-                        "Confirm Overpayment", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                    if (confirm != DialogResult.Yes) return;
+                    MessageBox.Show(
+                        $"Payment amount (₹{amount:N2}) cannot exceed the current outstanding balance due of ₹{_invoice.BalanceDue:N2}.",
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _txtAmount.Focus();
+                    return;
                 }
 
                 btnSave.Enabled = false;
@@ -214,6 +215,13 @@ namespace PROJECT_SBV1.Forms
                     };
 
                     await _billingService.RecordPaymentAsync(payment);
+
+                    // Synchronize in-memory invoice entity
+                    _invoice.Payments.Add(payment);
+                    _invoice.AmountPaid += amount;
+                    _invoice.BalanceDue = Math.Max(0m, _invoice.GrandTotal - _invoice.AmountPaid);
+                    _invoice.RecalculateTotals();
+
                     MessageBox.Show($"Payment of ₹{amount:N2} recorded successfully for invoice {_invoice.InvoiceNumber}!", "Payment Recorded", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     DialogResult = DialogResult.OK;
                     Close();

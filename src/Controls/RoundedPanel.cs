@@ -20,6 +20,7 @@ namespace PROJECT_SBV1.Controls
         public Color HoverBackgroundColor { get; set; } = Color.Empty;
         public MetricDetailInfo? MetricInfo { get; set; }
         public Action<RoundedPanel>? OnCardClicked { get; set; }
+        public Action<MouseEventArgs>? OnCardMouseWheel { get; set; }
 
         private bool _isHovered = false;
         public bool IsHovered => _isHovered;
@@ -51,11 +52,18 @@ namespace PROJECT_SBV1.Controls
             ctrl.MouseEnter += (s, e) => TriggerMouseEnter();
             ctrl.MouseLeave += (s, e) => CheckMouseLeave();
             ctrl.Click += (s, e) => OnCardClicked?.Invoke(this);
+            ctrl.MouseWheel += (s, e) => OnMouseWheel(e);
 
             foreach (Control sub in ctrl.Controls)
             {
                 AttachChildMouseEvents(sub);
             }
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            base.OnMouseWheel(e);
+            OnCardMouseWheel?.Invoke(e);
         }
 
         protected override void OnMouseEnter(EventArgs e)

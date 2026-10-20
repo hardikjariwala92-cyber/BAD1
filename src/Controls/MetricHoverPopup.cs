@@ -62,10 +62,35 @@ namespace PROJECT_SBV1.Controls
         {
             _info = info;
 
-            // Calculate dynamic height based on stats count
+            // Calculate dynamic height based on stats count and multi-line wrapping
+            int targetWidth = 350;
             int baseHeight = 175;
-            int statsHeight = (info.Stats != null && info.Stats.Count > 0) ? info.Stats.Count * 22 : 0;
-            Size = new Size(320, baseHeight + statsHeight);
+            if (!string.IsNullOrEmpty(info.GrowthText))
+            {
+                baseHeight += 4;
+            }
+
+            int statsHeight = 0;
+            if (info.Stats != null && info.Stats.Count > 0)
+            {
+                using var sf = new Font("Segoe UI", 8.5f, FontStyle.Regular);
+                using var vf = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+                foreach (var (lbl, val) in info.Stats)
+                {
+                    var lSize = TextRenderer.MeasureText("•  " + lbl, sf);
+                    var vSize = TextRenderer.MeasureText(val, vf);
+                    int availableForVal = targetWidth - 36 - lSize.Width;
+                    if (vSize.Width > availableForVal - 8)
+                    {
+                        statsHeight += 40; // 2 lines: label (18px) + indented value (22px)
+                    }
+                    else
+                    {
+                        statsHeight += 22; // single line
+                    }
+                }
+            }
+            Size = new Size(targetWidth, baseHeight + statsHeight);
 
             // Determine position relative to anchor control
             Point screenPt = anchor.PointToScreen(new Point(0, 0));
@@ -172,18 +197,24 @@ namespace PROJECT_SBV1.Controls
 
             // 5. Metric Values Row (Current vs Previous + Growth Badge)
             using var fontValLabel = new Font("Segoe UI", 7.5f, FontStyle.Regular);
-            using var fontCurVal = new Font("Segoe UI", 16f, FontStyle.Bold);
-            using var fontPrevVal = new Font("Segoe UI", 10f, FontStyle.Regular);
+            float curValFontSize = _info.CurrentValue.Length > 11 ? 14f : 16f;
+            using var fontCurVal = new Font("Segoe UI", curValFontSize, FontStyle.Bold);
+            using var fontPrevVal = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             using var subBrush = new SolidBrush(ThemeManager.TextSecondary);
 
             // Current Value
             g.DrawString("CURRENT", fontValLabel, subBrush, 16, curY);
+            var curValSize = g.MeasureString(_info.CurrentValue, fontCurVal);
             g.DrawString(_info.CurrentValue, fontCurVal, titleBrush, 14, curY + 12);
 
-            // Previous Value
+            // Previous Value (dynamically positioned with collision avoidance)
             if (!string.IsNullOrEmpty(_info.PreviousValue))
             {
-                int prevX = 170;
+                var prevValSize = g.MeasureString(_info.PreviousValue, fontPrevVal);
+                var prevLabelSize = g.MeasureString("PREVIOUS", fontValLabel);
+                float prevBlockWidth = Math.Max(prevValSize.Width, prevLabelSize.Width);
+                int prevX = (int)Math.Max(16 + curValSize.Width + 14, Width - 18 - prevBlockWidth);
+
                 g.DrawString("PREVIOUS", fontValLabel, subBrush, prevX, curY);
                 g.DrawString(_info.PreviousValue, fontPrevVal, subBrush, prevX, curY + 14);
             }
@@ -224,12 +255,24 @@ namespace PROJECT_SBV1.Controls
 
                 foreach (var (lbl, val) in _info.Stats)
                 {
-                    // Label
-                    g.DrawString("•  " + lbl, statFont, subBrush, 18, curY);
-                    // Value right-aligned
+                    var labelSize = g.MeasureString("•  " + lbl, statFont);
                     var valSize = g.MeasureString(val, valFont);
-                    g.DrawString(val, valFont, titleBrush, Width - 18 - valSize.Width, curY);
-                    curY += 22;
+                    int availableForVal = Width - 36 - (int)labelSize.Width;
+
+                    // If value exceeds remaining width, wrap to second indented line to eliminate collision
+                    if (valSize.Width > availableForVal - 8)
+                    {
+                        g.DrawString("•  " + lbl + ":", statFont, subBrush, 18, curY);
+                        curY += 18;
+                        g.DrawString(val, valFont, titleBrush, 32, curY);
+                        curY += 22;
+                    }
+                    else
+                    {
+                        g.DrawString("•  " + lbl, statFont, subBrush, 18, curY);
+                        g.DrawString(val, valFont, titleBrush, Width - 18 - valSize.Width, curY);
+                        curY += 22;
+                    }
                 }
             }
 

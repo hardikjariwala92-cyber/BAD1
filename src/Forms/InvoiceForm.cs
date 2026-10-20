@@ -61,11 +61,13 @@ namespace PROJECT_SBV1.Forms
         private RoundedPanel _cardSummary = null!;
         private RoundedPanel _pnlGrandTotal = null!;
         private ModernButton _btnSave = null!;
+        private ModernButton _btnRecordPayment = null!;
         private ModernButton _btnPreview = null!;
         private ModernButton _btnExport = null!;
         private ModernButton _btnClose = null!;
         private ModernButton _btnNewCust = null!;
         private ModernButton _btnAddItem = null!;
+        private ModernButton _btnScanBarcode = null!;
         private ModernButton _btnRemoveItem = null!;
 
         // Right column label references for responsive alignment
@@ -126,7 +128,7 @@ namespace PROJECT_SBV1.Forms
             _headerPanel.Controls.Add(lblHeader);
 
             // Action Buttons on Top Right
-            int btnX = 1110 - 580;
+            int btnX = 1110 - 720;
             _btnSave = new ModernButton
             {
                 Text = "💾 Save Invoice",
@@ -140,6 +142,48 @@ namespace PROJECT_SBV1.Forms
             _headerPanel.Controls.Add(_btnSave);
             _btnSave.Click += async (s, e) => await SaveInvoiceWorkflowAsync(showSuccessPrompt: true);
             btnX += 140;
+
+            _btnRecordPayment = new ModernButton
+            {
+                Text = "💳 Record Payment",
+                NormalColor = ThemeManager.AccentGreen,
+                HoverColor = Color.FromArgb(20, 200, 140),
+                Size = new Size(140, 34),
+                Location = new Point(btnX, 15),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                BorderRadius = 8
+            };
+            _headerPanel.Controls.Add(_btnRecordPayment);
+            _btnRecordPayment.Click += async (s, e) =>
+            {
+                if (_invoice.InvoiceId <= 0)
+                {
+                    bool saved = await SaveInvoiceWorkflowAsync(showSuccessPrompt: false);
+                    if (!saved) return;
+                }
+
+                if (_invoice.BalanceDue <= 0)
+                {
+                    MessageBox.Show("This invoice has no outstanding balance.", "Payment Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using var payDlg = new RecordPaymentDialog(_invoice);
+                if (payDlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    var updated = await _billingService.GetInvoiceByIdAsync(_invoice.InvoiceId);
+                    if (updated != null)
+                    {
+                        _invoice.Payments = updated.Payments;
+                        _invoice.AmountPaid = updated.AmountPaid;
+                        _invoice.BalanceDue = updated.BalanceDue;
+                        _invoice.Status = updated.Status;
+                        _cmbStatus.SelectedItem = updated.Status;
+                        RecalculateLiveSummary();
+                    }
+                }
+            };
+            btnX += 150;
 
             _btnPreview = new ModernButton
             {
@@ -441,29 +485,48 @@ namespace PROJECT_SBV1.Forms
             };
             _cardItems.Controls.Add(lblItemsTitle);
 
-            // Add & Remove Item buttons
+            // Add, Scan & Remove Item buttons
             _btnAddItem = new ModernButton
             {
                 Text = "+ Add Service / Item",
                 NormalColor = ThemeManager.AccentGreen,
                 HoverColor = Color.FromArgb(20, 200, 140),
-                Size = new Size(160, 30),
-                Location = new Point(780, 10),
+                PressedColor = Color.FromArgb(10, 160, 110),
+                Size = new Size(165, 30),
+                Location = new Point(625, 10),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                BorderRadius = 6
+                BorderRadius = 6,
+                ForeColor = Color.White
             };
             _cardItems.Controls.Add(_btnAddItem);
-            _btnAddItem.Click += (s, e) => AddNewItemRow();
+            _btnAddItem.Click += (s, e) => ShowManualAddItemDialog();
+
+            _btnScanBarcode = new ModernButton
+            {
+                Text = "📷 Scan Barcode",
+                NormalColor = ThemeManager.AccentBlue,
+                HoverColor = Color.FromArgb(79, 70, 229),
+                PressedColor = Color.FromArgb(67, 56, 202),
+                Size = new Size(150, 30),
+                Location = new Point(798, 10),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                BorderRadius = 6,
+                ForeColor = Color.White
+            };
+            _cardItems.Controls.Add(_btnScanBarcode);
+            _btnScanBarcode.Click += (s, e) => ShowBarcodeScannerDialog();
 
             _btnRemoveItem = new ModernButton
             {
                 Text = "🗑️ Remove Item",
                 NormalColor = Color.FromArgb(220, 53, 69),
                 HoverColor = Color.FromArgb(240, 70, 85),
+                PressedColor = Color.FromArgb(180, 40, 55),
                 Size = new Size(130, 30),
                 Location = new Point(955, 10),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                BorderRadius = 6
+                BorderRadius = 6,
+                ForeColor = Color.White
             };
             _cardItems.Controls.Add(_btnRemoveItem);
             _btnRemoveItem.Click += (s, e) => RemoveSelectedItemRow();
@@ -821,9 +884,77 @@ namespace PROJECT_SBV1.Forms
             dlg.ShowDialog(this);
         }
 
-        private void AddNewItemRow()
+        private void ShowManualAddItemDialog()
         {
-            _gridItems.Rows.Add("Cloud Subscription", "Standard monthly cloud services", 1, 5000.00, 0, 18, 5900.00);
+            using var dlg = new ManualAddItemDialog();
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                if (dlg.AddBlankRowRequested)
+                {
+                    _gridItems.Rows.Add("", "", 1, 0.00, 0, 18, 0.00);
+                    if (_gridItems.Rows.Count > 0)
+                    {
+                        _gridItems.CurrentCell = _gridItems.Rows[_gridItems.Rows.Count - 1].Cells[0];
+                        _gridItems.BeginEdit(true);
+                    }
+                }
+                else if (dlg.CreatedItem != null)
+                {
+                    var itm = dlg.CreatedItem;
+                    _gridItems.Rows.Add(itm.ServiceName, itm.Description, itm.Quantity, itm.UnitPrice, itm.DiscountPercent, itm.TaxPercent, itm.LineTotal);
+                }
+                RecalculateLiveSummary();
+            }
+        }
+
+        private void ShowBarcodeScannerDialog()
+        {
+            using var dlg = new BarcodeScannerDialog(product =>
+            {
+                AddOrIncrementProductItem(product);
+            });
+            dlg.ShowDialog(this);
+        }
+
+        public void AddOrIncrementProductItem(Product product)
+        {
+            if (product == null) return;
+
+            DataGridViewRow? existingRow = null;
+            foreach (DataGridViewRow row in _gridItems.Rows)
+            {
+                if (row.Cells[0].Value != null && string.Equals(row.Cells[0].Value.ToString(), product.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    existingRow = row;
+                    break;
+                }
+            }
+
+            if (existingRow != null)
+            {
+                decimal curQty = decimal.TryParse(existingRow.Cells[2].Value?.ToString(), out decimal q) ? q : 1m;
+                existingRow.Cells[2].Value = curQty + 1;
+            }
+            else
+            {
+                decimal tax = 18m;
+                decimal qty = 1m;
+                decimal gross = qty * product.Price;
+                decimal lineTotal = Math.Round(gross + (gross * (tax / 100m)), 2);
+                string desc = $"{product.Category} (SKU: {product.Barcode})";
+                _gridItems.Rows.Add(product.Name, desc, qty, product.Price, 0, tax, lineTotal);
+            }
+
+            RecalculateLiveSummary();
+        }
+
+        public void AddNewItemRow(string name = "Cloud Subscription", string desc = "Standard monthly cloud services", decimal qty = 1, decimal rate = 5000.00m, decimal disc = 0, decimal tax = 18)
+        {
+            decimal gross = qty * rate;
+            decimal discAmt = gross * (disc / 100m);
+            decimal taxable = gross - discAmt;
+            decimal lineTotal = Math.Round(taxable + (taxable * (tax / 100m)), 2);
+            _gridItems.Rows.Add(name, desc, qty, rate, disc, tax, lineTotal);
             RecalculateLiveSummary();
         }
 
@@ -965,11 +1096,12 @@ namespace PROJECT_SBV1.Forms
             _isSaving = true;
             try
             {
+                string selectedStatus = _cmbStatus.SelectedItem?.ToString() ?? "Unpaid";
+
                 _invoice.InvoiceNumber = _txtInvoiceNo.Text.Trim();
                 _invoice.InvoiceDate = _dtpInvoiceDate.Value;
                 _invoice.DueDate = _dtpDueDate.Value;
                 _invoice.PaymentTerms = _cmbTerms.SelectedItem?.ToString() ?? "Net 15";
-                _invoice.Status = _cmbStatus.SelectedItem?.ToString() ?? "Unpaid";
                 _invoice.IsInterState = _chkInterState.Checked;
 
                 _invoice.CustomerName = _txtCustName.Text.Trim();
@@ -985,9 +1117,66 @@ namespace PROJECT_SBV1.Forms
                 _invoice.TermsAndConditions = _txtTerms.Text.Trim();
 
                 _invoice.Items = validItems;
+                _invoice.Status = selectedStatus;
                 _invoice.RecalculateTotals();
 
+                // If user selected Paid, but outstanding balance remains:
+                if (selectedStatus == "Paid" && _invoice.BalanceDue > 0)
+                {
+                    var recordAns = MessageBox.Show(
+                        $"This invoice currently has an outstanding balance of ₹{_invoice.BalanceDue:N2}.\n\nTo set the status to 'Paid', a full settlement payment of ₹{_invoice.BalanceDue:N2} will be recorded. Do you want to proceed?",
+                        "Confirm Full Settlement", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (recordAns == DialogResult.Yes)
+                    {
+                        var payment = new Payment(
+                            _invoice.InvoiceId,
+                            _invoice.InvoiceNumber,
+                            _invoice.CustomerName,
+                            _invoice.BalanceDue,
+                            "Cash",
+                            "Direct-Settled",
+                            "Settled upon saving as Paid"
+                        )
+                        {
+                            PaymentDate = DateTime.Now
+                        };
+                        _invoice.Payments.Add(payment);
+                        _invoice.AmountPaid = _invoice.GrandTotal;
+                        _invoice.BalanceDue = 0m;
+                        _invoice.Status = "Paid";
+                    }
+                    else
+                    {
+                        // Reset to actual calculated status
+                        _invoice.RecalculateTotals();
+                        _cmbStatus.SelectedItem = _invoice.Status;
+                    }
+                }
+                else if (selectedStatus == "Draft" && _invoice.AmountPaid == 0)
+                {
+                    _invoice.Status = "Draft";
+                }
+                else if (selectedStatus == "Cancelled")
+                {
+                    _invoice.Status = "Cancelled";
+                }
+
                 await _billingService.SaveInvoiceAsync(_invoice);
+
+                // If any newly recorded in-memory payment exists, persist it
+                if (_invoice.InvoiceId > 0 && _invoice.Payments.Count > 0)
+                {
+                    foreach (var p in _invoice.Payments)
+                    {
+                        if (p.PaymentId == 0)
+                        {
+                            p.InvoiceId = _invoice.InvoiceId;
+                            p.InvoiceNumber = _invoice.InvoiceNumber;
+                            await _billingService.RecordPaymentAsync(p);
+                        }
+                    }
+                }
 
                 if (showSuccessPrompt)
                 {
@@ -1117,6 +1306,8 @@ namespace PROJECT_SBV1.Forms
             btnRight -= (120 + 10);
             _btnPreview.Location = new Point(btnRight - 125, 15);
             btnRight -= (125 + 10);
+            _btnRecordPayment.Location = new Point(btnRight - 145, 15);
+            btnRight -= (145 + 10);
             _btnSave.Location = new Point(btnRight - 130, 15);
 
             // 2. Metadata Cards (Invoice Details & Customer Details)
@@ -1184,7 +1375,8 @@ namespace PROJECT_SBV1.Forms
             _cardItems.Size = new Size(contentWidth, 290);
 
             _btnRemoveItem.Location = new Point(contentWidth - 16 - 130, 10);
-            _btnAddItem.Location = new Point(_btnRemoveItem.Left - 10 - 165, 10);
+            _btnScanBarcode.Location = new Point(_btnRemoveItem.Left - 10 - 150, 10);
+            _btnAddItem.Location = new Point(_btnScanBarcode.Left - 10 - 165, 10);
 
             _gridItems.Size = new Size(contentWidth - 32, 225);
 

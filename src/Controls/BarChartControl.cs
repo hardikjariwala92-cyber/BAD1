@@ -9,7 +9,7 @@ namespace PROJECT_SBV1.Controls
     {
         public (string Label, int Value)[] DataPoints { get; set; } = Array.Empty<(string, int)>();
         public int MaxValue { get; set; } = 400;
-        public string CurrencySymbol { get; set; } = "$";
+        public string CurrencySymbol { get; set; } = "₹";
         public string Unit { get; set; } = "k";
 
         private int _hoveredIndex = -1;
@@ -244,7 +244,7 @@ namespace PROJECT_SBV1.Controls
         private void DrawBarTooltip(Graphics g, RectangleF barRect, (string Label, int Value) point, string growthStr)
         {
             string monthFull = GetMonthFullName(point.Label);
-            string valText = $"{CurrencySymbol}{point.Value * 1000:N0}";
+            string valText = $"{CurrencySymbol}{(point.Value * 1000).ToString("N0", new System.Globalization.CultureInfo("en-IN"))}";
 
             using var fontTitle = new Font("Segoe UI", 8f, FontStyle.Bold);
             using var fontVal = new Font("Segoe UI", 9.5f, FontStyle.Bold);

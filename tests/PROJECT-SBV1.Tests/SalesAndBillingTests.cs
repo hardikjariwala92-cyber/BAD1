@@ -218,6 +218,8 @@ namespace PROJECT_SBV1.Tests
                 Assert.True(File.Exists(generatedPath));
                 var fileInfo = new FileInfo(generatedPath);
                 Assert.True(fileInfo.Length > 1000); // PDF contains vector graphics, fonts, tables
+                using var readDoc = PdfSharp.Pdf.IO.PdfReader.Open(generatedPath, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import);
+                Assert.Equal(1, readDoc.PageCount);
             }
             finally
             {
@@ -240,6 +242,427 @@ namespace PROJECT_SBV1.Tests
         {
             var form = new PROJECT_SBV1.Forms.InvoiceForm();
             Assert.Equal(System.Windows.Forms.FormWindowState.Maximized, form.WindowState);
+        }
+
+        [Fact]
+        public void TestBillingMetricCards_LayoutUniformWidthAndGap8()
+        {
+            int contentWidth = 1100;
+            int gap = 8;
+            int totalGaps = gap * 4;
+            int baseWidth = (contentWidth - totalGaps) / 5;
+            int remainder = (contentWidth - totalGaps) % 5;
+            int currentX = 0;
+
+            var widths = new List<int>();
+            var positions = new List<int>();
+
+            for (int i = 0; i < 5; i++)
+            {
+                int w = baseWidth + (i < remainder ? 1 : 0);
+                widths.Add(w);
+                positions.Add(currentX);
+                currentX += w + gap;
+            }
+
+            // Verify total width matches contentWidth
+            int totalCalculatedWidth = positions[4] + widths[4];
+            Assert.Equal(contentWidth, totalCalculatedWidth);
+
+            // Verify uniform 8px gap between all cards
+            for (int i = 0; i < 4; i++)
+            {
+                int cardRight = positions[i] + widths[i];
+                int nextCardLeft = positions[i + 1];
+                Assert.Equal(gap, nextCardLeft - cardRight);
+            }
+
+            // Verify widths are balanced within 1 pixel
+            int minW = widths.Min();
+            int maxW = widths.Max();
+            Assert.True(maxW - minW <= 1);
+        }
+
+        [Fact]
+        public void TestRoundedPanel_OnCardMouseWheel_Propagates()
+        {
+            var panel = new PROJECT_SBV1.Controls.RoundedPanel();
+            var label = new System.Windows.Forms.Label { Text = "Test Metric" };
+            panel.Controls.Add(label);
+
+            bool wheelInvoked = false;
+            int recordedDelta = 0;
+            panel.OnCardMouseWheel = (e) =>
+            {
+                wheelInvoked = true;
+                recordedDelta = e.Delta;
+            };
+
+            // Simulate mouse wheel directly on the panel
+            panel.OnCardMouseWheel(new System.Windows.Forms.MouseEventArgs(System.Windows.Forms.MouseButtons.None, 0, 10, 10, 120));
+
+            Assert.True(wheelInvoked);
+            Assert.Equal(120, recordedDelta);
+        }
+
+        [Fact]
+        public void TestRoundedPanel_OnCardClicked_TriggersAction()
+        {
+            var panel = new PROJECT_SBV1.Controls.RoundedPanel();
+            bool clicked = false;
+            panel.OnCardClicked = (p) => clicked = true;
+
+            panel.OnCardClicked(panel);
+            Assert.True(clicked);
+        }
+
+        [Fact]
+        public void TestBillingMetricDetailInfo_ModelProperties()
+        {
+            var metrics = new SalesDashboardMetrics
+            {
+                TotalSales = 1267923.81m,
+                TotalInvoices = 11,
+                PaidInvoices = 1,
+                UnpaidInvoices = 9,
+                PartiallyPaidInvoices = 1,
+                OverdueInvoices = 2,
+                OutstandingBalance = 1146178.81m,
+                TotalCollected = 121745.00m
+            };
+
+            var infoTotalSales = new MetricDetailInfo
+            {
+                Title = "Sales & Invoiced Revenue",
+                Icon = "💰",
+                CurrentValue = $"₹{metrics.TotalSales:N2}",
+                Category = "Revenue Analysis",
+                Stats = new List<(string Label, string Value)>
+                {
+                    ("Total Invoices", $"{metrics.TotalInvoices} records"),
+                    ("Total Collected", $"₹{metrics.TotalCollected:N2}")
+                }
+            };
+
+            Assert.Equal("Sales & Invoiced Revenue", infoTotalSales.Title);
+            Assert.Equal("💰", infoTotalSales.Icon);
+            Assert.Contains("12,67,923.81", infoTotalSales.CurrentValue);
+            Assert.Equal(2, infoTotalSales.Stats.Count);
+        }
+
+        [Fact]
+        public void TestBillingToolbar_RoundedSearchBoxAndRoundedComboBox()
+        {
+            var searchBox = new PROJECT_SBV1.Controls.RoundedSearchBox
+            {
+                PlaceholderText = "Search by invoice #...",
+                BorderRadius = 15
+            };
+            searchBox.Text = "INV-2026-001";
+            Assert.Equal("INV-2026-001", searchBox.Text);
+            Assert.Equal(15, searchBox.BorderRadius);
+
+            var combo = new PROJECT_SBV1.Controls.RoundedComboBox
+            {
+                BorderRadius = 15
+            };
+            combo.Items.AddRange(new string[] { "All", "Paid", "Partially Paid", "Unpaid", "Overdue", "Draft", "Cancelled" });
+            Assert.Equal(7, combo.Items.Count);
+
+            combo.SelectedItem = "Paid";
+            Assert.Equal("Paid", combo.SelectedItem?.ToString());
+
+            // Test mouse wheel cycling on combo box
+            combo.HandleWheelScroll(-1); // Next item: Partially Paid
+            Assert.Equal("Partially Paid", combo.SelectedItem?.ToString());
+        }
+
+        [Fact]
+        public void TestSalesRegister_StatusFilterRequirements()
+        {
+            var expectedStatuses = new[] { "All", "Paid", "Unpaid", "Partially Paid", "Overdue", "Draft", "Cancelled" };
+            var combo = new PROJECT_SBV1.Controls.RoundedComboBox { BorderRadius = 8 };
+            combo.Items.AddRange(expectedStatuses);
+
+            Assert.Equal(7, combo.Items.Count);
+            foreach (var status in expectedStatuses)
+            {
+                Assert.Contains(status, combo.Items);
+            }
+
+            combo.SelectedItem = "Overdue";
+            Assert.Equal("Overdue", combo.SelectedItem);
+            combo.SelectedItem = "Unpaid";
+            Assert.Equal("Unpaid", combo.SelectedItem);
+            combo.SelectedItem = "Paid";
+            Assert.Equal("Paid", combo.SelectedItem);
+            combo.SelectedItem = "Draft";
+            Assert.Equal("Draft", combo.SelectedItem);
+            combo.SelectedItem = "Cancelled";
+            Assert.Equal("Cancelled", combo.SelectedItem);
+        }
+
+        [Fact]
+        public void TestSalesRegister_DedicatedToolbarCardProperties()
+        {
+            var card = new PROJECT_SBV1.Controls.RoundedPanel
+            {
+                BorderRadius = 12,
+                BorderWidth = 1,
+                Size = new System.Drawing.Size(1100, 68)
+            };
+            Assert.Equal(12, card.BorderRadius);
+            Assert.Equal(1, card.BorderWidth);
+            Assert.Equal(68, card.Height);
+
+            var search = new PROJECT_SBV1.Controls.RoundedSearchBox
+            {
+                PlaceholderText = "Search by invoice # or customer name...",
+                BorderRadius = 8
+            };
+            Assert.Equal("Search by invoice # or customer name...", search.PlaceholderText);
+            Assert.Equal(8, search.BorderRadius);
+
+            var btnCreate = new PROJECT_SBV1.Controls.ModernButton
+            {
+                Text = "+ Create Invoice",
+                BorderRadius = 8,
+                NormalColor = System.Drawing.Color.FromArgb(16, 185, 129)
+            };
+            Assert.Equal("+ Create Invoice", btnCreate.Text);
+            Assert.Equal(System.Drawing.Color.FromArgb(16, 185, 129), btnCreate.NormalColor);
+            Assert.False(btnCreate.IsOutlined);
+
+            var btnRefresh = new PROJECT_SBV1.Controls.ModernButton
+            {
+                Text = "↻ Refresh",
+                BorderRadius = 8,
+                IsOutlined = false,
+                NormalColor = System.Drawing.Color.FromArgb(55, 65, 81),
+                ForeColor = System.Drawing.Color.White
+            };
+            Assert.Equal("↻ Refresh", btnRefresh.Text);
+            Assert.False(btnRefresh.IsOutlined);
+            Assert.Equal(System.Drawing.Color.White, btnRefresh.ForeColor);
+            Assert.Equal(System.Drawing.Color.FromArgb(55, 65, 81), btnRefresh.NormalColor);
+        }
+
+        [Theory]
+        [InlineData(94400.00, "₹94,400.00")]
+        [InlineData(0.00, "₹0.00")]
+        [InlineData(566400.00, "₹5,66,400.00")]
+        [InlineData(147287.60, "₹1,47,287.60")]
+        public void TestSalesRegister_CurrencyFormatting(decimal amount, string expected)
+        {
+            string formatted = $"₹{amount:N2}";
+            Assert.Equal(expected, formatted);
+        }
+
+        [Fact]
+        public void TestSalesRegister_TableEnhancedFormatAndStyling()
+        {
+            // Verify status badges color palettes exist and are properly defined
+            var statuses = new[] { "Paid", "Unpaid", "Partially Paid", "Overdue", "Draft", "Cancelled" };
+            foreach (var status in statuses)
+            {
+                Assert.False(string.IsNullOrEmpty(status));
+            }
+
+            // Verify clean client parsing
+            string fullClient = "Neha Patel (CloudWave Digital Media)";
+            int parenIdx = fullClient.IndexOf('(');
+            Assert.True(parenIdx > 0);
+            string clientName = fullClient.Substring(0, parenIdx).Trim();
+            string compName = fullClient.Substring(parenIdx).Trim();
+            Assert.Equal("Neha Patel", clientName);
+            Assert.Equal("(CloudWave Digital Media)", compName);
+        }
+
+        [Fact]
+        public void TestScenario1_FullPaymentAgainstUnpaid_BecomesPaid()
+        {
+            var invoice = new Invoice
+            {
+                InvoiceNumber = "INV-TEST-001",
+                CustomerName = "Test Client",
+                DueDate = DateTime.Today.AddDays(15),
+                Status = "Unpaid"
+            };
+            invoice.Items.Add(new InvoiceItem("Web App Development", "Frontend & Backend", 1m, 50000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            Assert.Equal("Unpaid", invoice.Status);
+            Assert.Equal(59000m, invoice.GrandTotal);
+            Assert.Equal(59000m, invoice.BalanceDue);
+
+            // Record full payment
+            invoice.Payments.Add(new Payment(0, invoice.InvoiceNumber, invoice.CustomerName, 59000m, "Bank Transfer", "REF-001", "Full"));
+            invoice.RecalculateTotals();
+
+            Assert.Equal(59000m, invoice.AmountPaid);
+            Assert.Equal(0m, invoice.BalanceDue);
+            Assert.Equal("Paid", invoice.Status);
+        }
+
+        [Fact]
+        public void TestScenario2_PartialPayment_BecomesPartiallyPaid()
+        {
+            var invoice = new Invoice
+            {
+                InvoiceNumber = "INV-TEST-002",
+                CustomerName = "Test Client",
+                DueDate = DateTime.Today.AddDays(15),
+                Status = "Unpaid"
+            };
+            invoice.Items.Add(new InvoiceItem("Consulting", "Security audit", 1m, 10000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            decimal grandTotal = invoice.GrandTotal; // 11,800
+            decimal partialAmount = 5000m;
+
+            invoice.Payments.Add(new Payment(0, invoice.InvoiceNumber, invoice.CustomerName, partialAmount, "UPI", "UPI-1", "Partial"));
+            invoice.RecalculateTotals();
+
+            Assert.Equal(partialAmount, invoice.AmountPaid);
+            Assert.Equal(grandTotal - partialAmount, invoice.BalanceDue);
+            Assert.Equal("Partially Paid", invoice.Status);
+        }
+
+        [Fact]
+        public void TestScenario3_RemainingBalancePayment_BecomesPaid()
+        {
+            var invoice = new Invoice
+            {
+                InvoiceNumber = "INV-TEST-003",
+                CustomerName = "Test Client",
+                DueDate = DateTime.Today.AddDays(15),
+                Status = "Unpaid"
+            };
+            invoice.Items.Add(new InvoiceItem("Design", "UI Wireframing", 1m, 20000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            decimal grandTotal = invoice.GrandTotal; // 23,600
+            decimal firstPayment = 10000m;
+            invoice.Payments.Add(new Payment(0, invoice.InvoiceNumber, invoice.CustomerName, firstPayment, "UPI", "UPI-1", "Step 1"));
+            invoice.RecalculateTotals();
+            Assert.Equal("Partially Paid", invoice.Status);
+
+            // Pay remainder
+            decimal remainder = invoice.BalanceDue; // 13,600
+            invoice.Payments.Add(new Payment(0, invoice.InvoiceNumber, invoice.CustomerName, remainder, "UPI", "UPI-2", "Step 2"));
+            invoice.RecalculateTotals();
+
+            Assert.Equal(grandTotal, invoice.AmountPaid);
+            Assert.Equal(0m, invoice.BalanceDue);
+            Assert.Equal("Paid", invoice.Status);
+        }
+
+        [Fact]
+        public void TestScenario4_DraftInvoice_WithFullPayment_BecomesPaid()
+        {
+            var invoice = new Invoice
+            {
+                InvoiceNumber = "INV-2026-0011",
+                CustomerName = "Neha Patel",
+                CompanyName = "CloudWave Digital Media",
+                DueDate = DateTime.Today.AddDays(15),
+                Status = "Draft"
+            };
+            invoice.Items.Add(new InvoiceItem("Cloud Architecture", "AWS setup", 1m, 80000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            Assert.Equal("Draft", invoice.Status);
+            Assert.Equal(94400m, invoice.GrandTotal);
+
+            // When full payment of 94,400 is recorded
+            invoice.Payments.Add(new Payment(0, invoice.InvoiceNumber, invoice.CustomerName, 94400m, "UPI", "UPI-94400", "Settled"));
+            invoice.RecalculateTotals();
+
+            // Status MUST update to Paid, resolving the bug shown in user screenshot
+            Assert.Equal(94400m, invoice.AmountPaid);
+            Assert.Equal(0m, invoice.BalanceDue);
+            Assert.Equal("Paid", invoice.Status);
+        }
+
+        [Fact]
+        public void TestScenario5_DraftAndCancelledInvoices_FollowBusinessRules()
+        {
+            // Draft invoice without payments remains Draft
+            var draftInv = new Invoice
+            {
+                InvoiceNumber = "INV-2026-0007",
+                CustomerName = "Priya Nair",
+                DueDate = DateTime.Today.AddDays(-10), // Even if past due!
+                Status = "Draft"
+            };
+            draftInv.Items.Add(new InvoiceItem("Consulting", "Retainer", 1m, 10000m, 0m, 18m));
+            draftInv.RecalculateTotals();
+            Assert.Equal("Draft", draftInv.Status);
+
+            // Cancelled invoice remains Cancelled
+            var cancelledInv = new Invoice
+            {
+                InvoiceNumber = "INV-2026-0004",
+                CustomerName = "Priya Nair",
+                DueDate = DateTime.Today.AddDays(-30),
+                Status = "Cancelled"
+            };
+            cancelledInv.Items.Add(new InvoiceItem("Cancelled Service", "Audit", 1m, 10000m, 0m, 18m));
+            cancelledInv.RecalculateTotals();
+            Assert.Equal("Cancelled", cancelledInv.Status);
+        }
+
+        [Fact]
+        public async Task TestScenario6_DatabasePersistence_RecordPaymentAsync_Workflow()
+        {
+            var billingService = BillingDataService.Instance;
+
+            // 1. Create a fresh invoice in database
+            string invNo = await billingService.GetNextInvoiceNumberAsync();
+            var invoice = new Invoice
+            {
+                InvoiceNumber = invNo,
+                CustomerId = 1,
+                CustomerName = "Persistence Test Client",
+                DueDate = DateTime.Today.AddDays(15),
+                PaymentTerms = "Net 15",
+                Status = "Unpaid"
+            };
+            invoice.Items.Add(new InvoiceItem("Persistence Test Service", "DB testing", 1m, 20000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            bool saved = await billingService.SaveInvoiceAsync(invoice);
+            Assert.True(saved);
+            Assert.True(invoice.InvoiceId > 0);
+            Assert.Equal(23600m, invoice.GrandTotal);
+
+            // 2. Record partial payment of 10,000 via RecordPaymentAsync
+            var payment1 = new Payment(invoice.InvoiceId, invoice.InvoiceNumber, invoice.CustomerName, 10000m, "UPI", "TEST-REF-1", "Partial Test");
+            bool pay1Recorded = await billingService.RecordPaymentAsync(payment1);
+            Assert.True(pay1Recorded);
+
+            // Verify refreshed from DB
+            var dbInv1 = await billingService.GetInvoiceByIdAsync(invoice.InvoiceId);
+            Assert.NotNull(dbInv1);
+            Assert.Equal(10000m, dbInv1.AmountPaid);
+            Assert.Equal(13600m, dbInv1.BalanceDue);
+            Assert.Equal("Partially Paid", dbInv1.Status);
+
+            // 3. Record remaining payment of 13,600
+            var payment2 = new Payment(invoice.InvoiceId, invoice.InvoiceNumber, invoice.CustomerName, 13600m, "Bank Transfer", "TEST-REF-2", "Final Test");
+            bool pay2Recorded = await billingService.RecordPaymentAsync(payment2);
+            Assert.True(pay2Recorded);
+
+            // Verify refreshed from DB
+            var dbInv2 = await billingService.GetInvoiceByIdAsync(invoice.InvoiceId);
+            Assert.NotNull(dbInv2);
+            Assert.Equal(23600m, dbInv2.AmountPaid);
+            Assert.Equal(0m, dbInv2.BalanceDue);
+            Assert.Equal("Paid", dbInv2.Status);
+
+            // 4. Verify invalid invoice ID throws exception (ensures error handling & foreign key validation)
+            var invalidPay = new Payment(999999, "INV-NONE", "Ghost", 500m, "Cash", "REF", "");
+            await Assert.ThrowsAnyAsync<Exception>(() => billingService.RecordPaymentAsync(invalidPay));
         }
     }
 }

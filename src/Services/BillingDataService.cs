@@ -106,6 +106,19 @@ namespace PROJECT_SBV1.Services
             using var cmd = new SqliteCommand(ddl, conn);
             cmd.ExecuteNonQuery();
 
+            // Self-repair any inconsistent records where payments were recorded but status remained Draft
+            string repairSql = @"
+                UPDATE Invoices 
+                SET Status = 'Paid' 
+                WHERE Status = 'Draft' AND GrandTotal > 0 AND AmountPaid >= GrandTotal;
+
+                UPDATE Invoices 
+                SET Status = 'Partially Paid' 
+                WHERE Status = 'Draft' AND AmountPaid > 0 AND AmountPaid < GrandTotal;
+            ";
+            using var repairCmd = new SqliteCommand(repairSql, conn);
+            repairCmd.ExecuteNonQuery();
+
             SeedDefaultDataIfEmpty(conn);
         }
 
@@ -645,18 +658,31 @@ namespace PROJECT_SBV1.Services
                 decimal totalPaid = Convert.ToDecimal(await sumCmd.ExecuteScalarAsync() ?? 0.0);
                 decimal balanceDue = Math.Max(0m, grandTotal - totalPaid);
 
-                // Determine new status
+                // Determine new status according to business rules
                 string newStatus = currentStatus;
-                if (currentStatus != "Cancelled")
+                if (currentStatus == "Cancelled")
                 {
-                    if (totalPaid >= grandTotal && grandTotal > 0)
-                        newStatus = "Paid";
-                    else if (totalPaid > 0)
-                        newStatus = "Partially Paid";
-                    else if (dueDate < DateTime.Today)
-                        newStatus = "Overdue";
-                    else
-                        newStatus = "Unpaid";
+                    newStatus = "Cancelled";
+                }
+                else if (totalPaid >= grandTotal && grandTotal > 0)
+                {
+                    newStatus = "Paid";
+                }
+                else if (totalPaid > 0 && totalPaid < grandTotal)
+                {
+                    newStatus = "Partially Paid";
+                }
+                else if (currentStatus == "Draft")
+                {
+                    newStatus = "Draft";
+                }
+                else if (dueDate.Date < DateTime.Today.Date && balanceDue > 0)
+                {
+                    newStatus = "Overdue";
+                }
+                else
+                {
+                    newStatus = "Unpaid";
                 }
 
                 // 4. Update Invoice
@@ -669,7 +695,11 @@ namespace PROJECT_SBV1.Services
                 updCmd.Parameters.AddWithValue("@bal", (double)balanceDue);
                 updCmd.Parameters.AddWithValue("@status", newStatus);
                 updCmd.Parameters.AddWithValue("@id", payment.InvoiceId);
-                await updCmd.ExecuteNonQueryAsync();
+                int rows = await updCmd.ExecuteNonQueryAsync();
+                if (rows == 0)
+                {
+                    throw new InvalidOperationException($"Invoice #{payment.InvoiceNumber} (ID: {payment.InvoiceId}) was not found in database to update totals.");
+                }
 
                 trans.Commit();
                 return true;
