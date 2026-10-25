@@ -16,6 +16,7 @@ namespace PROJECT_SBV1.Forms
         private TextBox _txtTagline = null!;
         private TextBox _txtAddress = null!;
         private TextBox _txtCity = null!;
+        private TextBox _txtCountry = null!;
         private TextBox _txtPhone = null!;
         private TextBox _txtEmail = null!;
         private TextBox _txtGSTIN = null!;
@@ -67,6 +68,7 @@ namespace PROJECT_SBV1.Forms
             _txtTagline = AddLabeledInput("Tagline / Subtitle:", y, pnlContainer); y += 60;
             _txtAddress = AddLabeledInput("Business Address:", y, pnlContainer); y += 60;
             _txtCity = AddLabeledInput("City & State:", y, pnlContainer); y += 60;
+            _txtCountry = AddLabeledInput("Country:", y, pnlContainer); y += 60;
             _txtPhone = AddLabeledInput("Phone Number:", y, pnlContainer); y += 60;
             _txtEmail = AddLabeledInput("Email Address:", y, pnlContainer); y += 60;
             _txtGSTIN = AddLabeledInput("GSTIN (Tax Identification Number):", y, pnlContainer); y += 60;
@@ -151,6 +153,7 @@ namespace PROJECT_SBV1.Forms
                 _profile.Tagline = _txtTagline.Text.Trim();
                 _profile.Address = _txtAddress.Text.Trim();
                 _profile.City = _txtCity.Text.Trim();
+                _profile.Country = _txtCountry.Text.Trim();
                 _profile.Phone = _txtPhone.Text.Trim();
                 _profile.Email = _txtEmail.Text.Trim();
                 _profile.GSTIN = _txtGSTIN.Text.Trim();
@@ -162,6 +165,7 @@ namespace PROJECT_SBV1.Forms
 
                 await _billingService.SaveBusinessProfileAsync(_profile);
                 MessageBox.Show("Business profile and invoice settings saved successfully!", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                DialogResult = DialogResult.OK;
                 Close();
             };
         }
@@ -173,6 +177,7 @@ namespace PROJECT_SBV1.Forms
             _txtTagline.Text = _profile.Tagline;
             _txtAddress.Text = _profile.Address;
             _txtCity.Text = _profile.City;
+            _txtCountry.Text = _profile.Country;
             _txtPhone.Text = _profile.Phone;
             _txtEmail.Text = _profile.Email;
             _txtGSTIN.Text = _profile.GSTIN;

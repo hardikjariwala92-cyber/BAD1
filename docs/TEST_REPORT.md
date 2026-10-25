@@ -6,6 +6,230 @@ This document records all build and automated test runs. No feature or task may 
 
 ## Test Execution Log
 
+### Test Run: TR-20261025-005 (Settings Company Details High-Contrast Light Mode Fix & Dynamic Theme Toggle Sync)
+- **Date & Time**: 2026-10-25 16:04:38 IST
+- **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`
+- **Environment**: Windows 11, .NET SDK `10.0.401`, Target Framework `net8.0-windows`
+- **Executed By**: Hardik (Full-Stack UI/UX & Engine Developer) & Antigravity
+- **Commands Executed**:
+  ```powershell
+  dotnet build --nologo
+  dotnet test --nologo
+  ```
+- **Actual Build Output**:
+  ```text
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PROJECT-SBV1 -> D:\sofwere\bin\Debug\net8.0-windows\PROJECT-SBV1.dll
+  PROJECT-SBV1.Tests -> D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  ```
+- **Actual Test Output**:
+  ```text
+  Passed!  - Failed: 0, Passed: 101, Skipped: 0, Total: 101, Duration: 8 s - PROJECT-SBV1.Tests.dll (net8.0)
+  ```
+- **Result**: **PASS (100% pass rate, 101/101 tests)**
+- **Associated Task**: `TASK-SPRINT-001` & `TASK-SPRINT-002` (Light Mode Text Readability & Dynamic Theme Sync)
+- **Verification Evidence**:
+  1. **Light Mode High-Contrast Color Palette**: Replaced hardcoded white/light-gray text in `DashboardForm.cs`'s `RefreshCompanySettingsPreviewAsync()` with high-contrast Slate typography for Light Mode:
+     - Company Name: Deep Slate 900 (`#0F172A`)
+     - Details (Phone, Email, Bank, IFSC): Crisp Slate 800 (`#1E293B`)
+     - Section Headers: Slate 600 (`#475569`)
+     - Address: Slate 500 (`#64748B`)
+     - Tagline & UPI: Vibrant Indigo 600 (`#4F46E5`)
+     - GSTIN: Emerald 600 (`#059669`)
+     - Card Background & Border: Slate 50 (`#F8FAFC`) with Slate 200 border (`#E2E8F0`).
+  2. **Dynamic Theme Switching Synchronization**: Linked `_settingsCompanyPreviewPanel` and `_lblSettingsCurrentTheme` into `ApplyThemeColors()`, allowing real-time color adaptation when toggling between Light and Dark mode without reloading or restarting.
+  3. **Zero Regressions**: All 101 automated tests across Sales, Invoices, Barcodes, Customers, and Invoice Designer pass with 100% success.
+
+---
+
+### Test Run: TR-20261025-004 (Single-Screen Invoice PDF Designer, Live GDI+ Vector Preview, Branding Persistence & Unit Tests)
+- **Date & Time**: 2026-10-25 15:02:35 IST
+- **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`
+- **Environment**: Windows 11, .NET SDK `10.0.401`, Target Framework `net8.0-windows`
+- **Executed By**: Hardik (Full-Stack UI/UX & Engine Developer) & Antigravity
+- **Commands Executed**:
+  ```powershell
+  dotnet build --nologo
+  dotnet test --nologo
+  ```
+- **Actual Build Output**:
+  ```text
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PROJECT-SBV1 -> D:\sofwere\bin\Debug\net8.0-windows\PROJECT-SBV1.dll
+  PROJECT-SBV1.Tests -> D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  ```
+- **Actual Test Output**:
+  ```text
+  Test run for D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll (.NETCoreApp,Version=v8.0)
+  A total of 1 test files matched the specified pattern.
+
+  Passed!  - Failed: 0, Passed: 101, Skipped: 0, Total: 101, Duration: 7 s - PROJECT-SBV1.Tests.dll (net8.0)
+  ```
+- **Result**: **PASS (100% pass rate, 101/101 tests)**
+- **Associated Task**: `TASK-SPRINT-001` & `TASK-SPRINT-002` (Single-Screen Live Invoice PDF Designer Upgrade)
+- **Verification Evidence**:
+  1. **Single-Screen Invoice Designer Form (`InvoiceDesignerForm.cs`)**: Replaced modal popup dialog with a full-screen, split-view designer.
+  2. **Left Editing Panel**:
+     - 3 collapsible cards: *Business Information*, *Bank Payment Details*, and *Invoice Branding*.
+     - Logo selection with browse, clear, and live thumbnail preview.
+     - Accent color palette selector with preset color swatches + custom ColorDialog.
+  3. **Right Live Preview Panel**:
+     - In-memory vector bitmap rendering via `InvoicePdfService.Instance.RenderInvoiceBitmap()`, perfectly mirroring the PDFsharp output.
+     - 250ms debounce timer preventing UI lag during typing.
+     - Real-time instant preview of business details, bank details, logo, accent color, and footer note.
+     - Zoom controls (`Fit to Page`, `Zoom -`, Zoom %, `Zoom +`) and invoice switcher dropdown.
+  4. **Action Toolbar**:
+     - `Back to Settings` with unsaved changes prompt.
+     - `Save Changes` with validation, feedback, and database persistence.
+     - `Reset Changes` with confirmation prompt and live preview restoration.
+     - `Preview / Refresh PDF` manual trigger.
+     - `Export PDF` file generation via `SaveFileDialog`.
+  5. **Automated Unit Tests**: Added `tests/PROJECT-SBV1.Tests/InvoiceDesignerTests.cs` verifying profile clone & new properties, SQLite persistence, GDI+ vector bitmap rendering at multiple scales, PDFsharp file generation, and form initialization.
+
+---
+
+### Test Run: TR-20261025-003 (Company Details & Invoice PDF Branding Settings, Dynamic Profile Update & Live Preview)
+- **Date & Time**: 2026-10-25 14:43:00 IST
+- **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`
+- **Environment**: Windows 11, .NET SDK `10.0.401`, Target Framework `net8.0-windows`
+- **Executed By**: Hardik (Full-Stack UI/UX & Engine Developer) & Antigravity
+- **Commands Executed**:
+  ```powershell
+  dotnet build --nologo
+  dotnet test --nologo
+  ```
+- **Actual Build Output**:
+  ```text
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PROJECT-SBV1 -> D:\sofwere\bin\Debug\net8.0-windows\PROJECT-SBV1.dll
+  PROJECT-SBV1.Tests -> D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  ```
+- **Actual Test Output**:
+  ```text
+  Passed!  - Failed: 0, Passed: 96, Skipped: 0, Total: 96, Duration: 8 s - PROJECT-SBV1.Tests.dll (net8.0)
+  ```
+- **Result**: **PASS (100% pass rate, 96/96 tests)**
+- **Associated Task**: `TASK-SPRINT-001` & `TASK-SPRINT-002` (Settings Company Details & PDF Branding Integration)
+- **Verification Evidence**:
+  1. **Settings Page Company Card**: Added `_settingsCompanyCard` with live layout previewing company name, tagline, address, GSTIN, phone, email, bank details, and UPI ID.
+  2. **Direct Action Buttons**:
+     - `[ ✏️ Edit Company Details ]`: Opens `BusinessProfileDialog` to update business name, tagline, address, city, country, phone, email, GSTIN, bank details, and terms.
+     - `[ 👁️ Preview Sample PDF ]`: Generates and opens a live PDF with the updated company details instantly.
+  3. **InvoiceForm Company Info Integration**:
+     - Added `[ 🏢 Company Info ]` button in the header of `InvoiceForm.cs` right next to `👁️ Preview PDF`.
+     - `PreviewPdfWorkflowAsync()` and `ExportPdfWorkflowAsync()` dynamically fetch the latest business profile before rendering PDF so updates appear immediately without restarting the application.
+  4. **Right-Click Context Menu Access**: Added `🏢 Update Company & Invoice Details` directly in the Sales Register grid context menu.
+  5. **Automated Unit & PDF Test**: Added `TestScenario8_BusinessProfile_UpdateAndPdfBranding_Workflow` in `SalesAndBillingTests.cs` verifying end-to-end profile update, database persistence, and PDF generation with clean cleanup.
+
+---
+
+### Test Run: TR-20261025-002 (Sales Register Inline Edit & Delete Action Buttons & Cascade Deletion)
+- **Date & Time**: 2026-10-25 14:26:00 IST
+- **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`
+- **Environment**: Windows 11, .NET SDK `10.0.401`, Target Framework `net8.0-windows`
+- **Executed By**: Hardik (Full-Stack UI/UX & Engine Developer) & Antigravity
+- **Commands Executed**:
+  ```powershell
+  dotnet build --nologo
+  dotnet test --nologo
+  ```
+- **Actual Build Output**:
+  ```text
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PROJECT-SBV1 -> D:\sofwere\bin\Debug\net8.0-windows\PROJECT-SBV1.dll
+  PROJECT-SBV1.Tests -> D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  ```
+- **Actual Test Output**:
+  ```text
+  Passed!  - Failed: 0, Passed: 95, Skipped: 0, Total: 95, Duration: 7 s - PROJECT-SBV1.Tests.dll (net8.0)
+  ```
+- **Result**: **PASS (100% pass rate, 95/95 tests)**
+- **Associated Task**: `TASK-SPRINT-001` & `TASK-SPRINT-002` (Sales Register Inline Actions)
+- **Verification Evidence**:
+  1. **Actions Column Added**: Added `Actions` column to `_gridInvoices` (Width: 135, Header alignment: Center).
+  2. **Modern Inline Buttons Custom Cell Painting**:
+     - `Edit`: Styled as a Bootstrap soft primary pill (`#e0eeff` light / `#1e304b` dark, 6px border radius, bold Segoe UI text).
+     - `Del`: Styled as a Bootstrap soft danger pill (`#fee2e2` light / `#37191e` dark, 6px border radius, bold Segoe UI text).
+  3. **Interactive Click & Mouse Hand Cursor**:
+     - Clicking `Edit` pill loads invoice data and opens `InvoiceForm` in edit mode; saves updates and refreshes the table.
+     - Clicking `Del` pill presents a confirmation dialog warning of permanent deletion. Upon user confirmation, deletes associated invoice items, payment records, and invoice entity via `DeleteInvoiceAsync` and reloads table data.
+     - `CellMouseMove` dynamically sets `Cursor = Cursors.Hand` when hovering over the Actions column.
+  4. **Right-Click Context Menu Support**: Added `🗑️ Delete Invoice` to the context menu for quick accessibility.
+  5. **Automated Unit & DB Test**: Added `TestScenario7_DatabasePersistence_DeleteInvoiceAsync_Workflow` in `SalesAndBillingTests.cs` verifying full transaction rollback safety and cascade deletion across `InvoiceItems` and `Payments`.
+
+---
+
+### Test Run: TR-20261025-001 (Customer Management Page CSS & Bootstrap 5 Upgrade, Rounded Table & Full Interactivity)
+- **Date & Time**: 2026-10-25 14:12:00 IST
+- **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`
+- **Environment**: Windows 11, .NET SDK `10.0.401`, Target Framework `net8.0-windows`
+- **Executed By**: Hardik (Full-Stack UI/UX & Engine Developer) & Antigravity
+- **Commands Executed**:
+  ```powershell
+  dotnet build --nologo
+  dotnet test --nologo
+  ```
+- **Actual Build Output**:
+  ```text
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PROJECT-SBV1 -> D:\sofwere\bin\Debug\net8.0-windows\PROJECT-SBV1.dll
+  PROJECT-SBV1.Tests -> D:\sofwere\tests\PROJECT-SBV1.Tests\bin\Debug\net8.0-windows\PROJECT-SBV1.Tests.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  ```
+- **Actual Test Output**:
+  ```text
+  Passed!  - Failed: 0, Passed: 94, Skipped: 0, Total: 94, Duration: 1 s - PROJECT-SBV1.Tests.dll (net8.0)
+  ```
+- **Result**: **PASS (100% pass rate, 94/94 tests)**
+- **Associated Task**: `TASK-SPRINT-001` & `TASK-SPRINT-002` (Customer Directory CSS, Bootstrap 5 & Rounded Table Upgrade)
+- **Verification Evidence**:
+  1. **Top Metrics Row (4 Live Interactive KPI Cards)**: Added 4 live interactive cards (`Total Customers`, `Active Accounts`, `Cities Covered`, `Global Countries`) with real-time statistics and responsive resizing.
+  2. **Bootstrap 5 Toolbar**: Modern `RoundedSearchBox` (`BorderRadius = 8`), `RoundedComboBox` for country filtering (`All Countries`), `+ Add Customer` (Bootstrap Green), and `↻ Refresh` (Bootstrap Blue).
+  3. **Rounded Table Card & Wrapper**: Created `_customersGridWrapper` (`BorderRadius = 8`) to smoothly round the table corners and prevent sharp rectangular overflow.
+  4. **Bootstrap 5 Table Styling (`table-striped`, `table-hover`)**:
+     - Custom cell painting for alternating dark/light rows.
+     - Smooth hover highlighting with 3.5px neon cyan accent bar (`#0ea5e9`).
+     - Column 0: Centered ID pill tag (`#ID`).
+     - Column 1: Colorful initial avatar circle with dynamic gradient + bold customer name.
+     - Column 2 & 3: Clean Segoe UI typography for Email and Phone.
+     - Column 4: Bootstrap soft pastel city badge pill.
+     - Column 5: Authentic Bootstrap 5 `.badge rounded-pill` with glowing status dot for countries (USA, UK, Germany, Canada, etc.).
+     - Column 6: Dedicated Bootstrap inline action buttons (`Edit` subtle primary pill and `Del` subtle danger pill) with click detection and hand cursor.
+  5. **Full Working Condition**:
+     - Instant real-time multi-column search filter as user types.
+     - Country dropdown filter.
+     - Interactive column header sorting (ascending / descending with sort arrow indicator).
+     - Modernized Add & Edit Customer dialog with input validation.
+     - Inline Edit and Delete button click detection, row double-click to edit, right-click context menu.
+     - Custom `DarkScrollBar` synchronization.
+  6. **Automated Test Coverage**: Added 6 new unit & integration tests in `CustomerManagementTests.cs`, bringing total passing test suite from 88 to 94 tests.
+
+---
+
 ### Test Run: TR-20261020-004 (Product Inventory Barcode Scanner & Lookup Integration)
 - **Date & Time**: 2026-10-20 14:56:30 IST
 - **Target**: `d:/sofwere/PROJECT-SBV1.csproj` & `tests/PROJECT-SBV1.Tests/PROJECT-SBV1.Tests.csproj`

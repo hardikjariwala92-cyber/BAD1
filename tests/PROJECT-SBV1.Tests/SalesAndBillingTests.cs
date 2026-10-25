@@ -664,5 +664,132 @@ namespace PROJECT_SBV1.Tests
             var invalidPay = new Payment(999999, "INV-NONE", "Ghost", 500m, "Cash", "REF", "");
             await Assert.ThrowsAnyAsync<Exception>(() => billingService.RecordPaymentAsync(invalidPay));
         }
+
+        [Fact]
+        public async Task TestScenario7_DatabasePersistence_DeleteInvoiceAsync_Workflow()
+        {
+            var billingService = BillingDataService.Instance;
+
+            // 1. Create a fresh invoice with items and payment in database
+            string invNo = await billingService.GetNextInvoiceNumberAsync();
+            var invoice = new Invoice
+            {
+                InvoiceNumber = invNo,
+                CustomerId = 1,
+                CustomerName = "Deletion Test Client",
+                DueDate = DateTime.Today.AddDays(10),
+                PaymentTerms = "Due Upon Receipt",
+                Status = "Unpaid"
+            };
+            invoice.Items.Add(new InvoiceItem("Deletion Test Item", "DB testing", 1m, 15000m, 0m, 18m));
+            invoice.RecalculateTotals();
+
+            bool saved = await billingService.SaveInvoiceAsync(invoice);
+            Assert.True(saved);
+            Assert.True(invoice.InvoiceId > 0);
+
+            // Add payment
+            var payment = new Payment(invoice.InvoiceId, invoice.InvoiceNumber, invoice.CustomerName, 5000m, "Cash", "CASH-DEL", "Deposit");
+            bool paySaved = await billingService.RecordPaymentAsync(payment);
+            Assert.True(paySaved);
+
+            // Verify exists in DB
+            var dbInv = await billingService.GetInvoiceByIdAsync(invoice.InvoiceId);
+            Assert.NotNull(dbInv);
+            Assert.Single(dbInv.Items);
+            Assert.Single(dbInv.Payments);
+
+            // 2. Delete invoice via DeleteInvoiceAsync
+            bool deleted = await billingService.DeleteInvoiceAsync(invoice.InvoiceId);
+            Assert.True(deleted);
+
+            // 3. Verify invoice is removed
+            var deletedInv = await billingService.GetInvoiceByIdAsync(invoice.InvoiceId);
+            Assert.Null(deletedInv);
+
+            // 4. Calling DeleteInvoiceAsync on non-existent invoice returns false
+            bool deleteAgain = await billingService.DeleteInvoiceAsync(invoice.InvoiceId);
+            Assert.False(deleteAgain);
+        }
+
+        [Fact]
+        public async Task TestScenario8_BusinessProfile_UpdateAndPdfBranding_Workflow()
+        {
+            var billingService = BillingDataService.Instance;
+            var pdfService = new InvoicePdfService();
+
+            // 1. Fetch current profile
+            var originalProfile = await billingService.GetBusinessProfileAsync();
+            Assert.NotNull(originalProfile);
+
+            // 2. Update with custom company and bank details
+            var updatedProfile = new BusinessProfile
+            {
+                BusinessName = "Hardik Global Tech Solutions Pvt Ltd",
+                Tagline = "Next-Gen Enterprise Cloud & AI Systems",
+                Address = "Floor 9, Titanium Square, Thaltej",
+                City = "Ahmedabad, Gujarat",
+                Country = "India",
+                Phone = "+91 99887 76655",
+                Email = "accounts@hardiktech.in",
+                GSTIN = "24AABCH1234F1Z9",
+                BankName = "ICICI Bank Ltd.",
+                AccountNumber = "002405001234",
+                IFSC = "ICIC0000024",
+                UPIId = "hardiktech@icici",
+                DefaultTerms = "1. Payment due upon invoice generation.\n2. 18% GST applicable."
+            };
+
+            bool saved = await billingService.SaveBusinessProfileAsync(updatedProfile);
+            Assert.True(saved);
+
+            // 3. Verify retrieved profile has updated company details
+            var retrieved = await billingService.GetBusinessProfileAsync();
+            Assert.Equal("Hardik Global Tech Solutions Pvt Ltd", retrieved.BusinessName);
+            Assert.Equal("Next-Gen Enterprise Cloud & AI Systems", retrieved.Tagline);
+            Assert.Equal("Floor 9, Titanium Square, Thaltej", retrieved.Address);
+            Assert.Equal("Ahmedabad, Gujarat", retrieved.City);
+            Assert.Equal("India", retrieved.Country);
+            Assert.Equal("+91 99887 76655", retrieved.Phone);
+            Assert.Equal("accounts@hardiktech.in", retrieved.Email);
+            Assert.Equal("24AABCH1234F1Z9", retrieved.GSTIN);
+            Assert.Equal("ICICI Bank Ltd.", retrieved.BankName);
+            Assert.Equal("002405001234", retrieved.AccountNumber);
+            Assert.Equal("ICIC0000024", retrieved.IFSC);
+            Assert.Equal("hardiktech@icici", retrieved.UPIId);
+
+            // 4. Verify PDF generation executes cleanly with updated profile
+            var sampleInvoice = new Invoice
+            {
+                InvoiceNumber = "TEST-PDF-001",
+                CustomerName = "Aarav Sharma",
+                CompanyName = "TechCorp Solutions Pvt Ltd",
+                InvoiceDate = DateTime.Today,
+                DueDate = DateTime.Today.AddDays(15),
+                Status = "Paid"
+            };
+            sampleInvoice.Items.Add(new InvoiceItem("Enterprise License", "Annual Subscription", 1m, 50000m, 0m, 18m));
+            sampleInvoice.RecalculateTotals();
+
+            string tempPdfPath = Path.Combine(Path.GetTempPath(), $"Test_Profile_{Guid.NewGuid():N}.pdf");
+            try
+            {
+                string generatedPath = pdfService.GenerateInvoicePdf(sampleInvoice, retrieved, tempPdfPath);
+                Assert.True(File.Exists(generatedPath));
+                var fileInfo = new FileInfo(generatedPath);
+                Assert.True(fileInfo.Length > 1000); // PDF contains vector graphics, text & metadata
+            }
+            finally
+            {
+                if (File.Exists(tempPdfPath))
+                {
+                    try { File.Delete(tempPdfPath); } catch { }
+                }
+
+                // Restore original profile
+                await billingService.SaveBusinessProfileAsync(originalProfile);
+            }
+        }
     }
 }
+

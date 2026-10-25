@@ -115,11 +115,35 @@ namespace PROJECT_SBV1.Forms
         private List<Product> _currentFilteredProducts = new();
 
         // Customers Page Controls
-        private DataGridView? _gridCustomers;
-        private RoundedPanel? _customersHeaderCard;
-        private RoundedPanel? _customersTableCard;
+        private readonly List<RoundedPanel> _customerMetricCards = new();
+        private int _selectedCustomerCardIndex = -1;
+        private Label? _lblValTotalCustomers;
+        private Label? _lblValActiveCustomers;
+        private Label? _lblValTotalCities;
+        private Label? _lblValTotalCountries;
+        private Label? _lblTrendTotalCustomers;
+        private Label? _lblTrendActiveCustomers;
+        private Label? _lblTrendTotalCities;
+        private Label? _lblTrendTotalCountries;
+
+        private RoundedPanel? _customersToolbarCard;
+        private RoundedSearchBox? _txtSearchCustomer;
+        private Label? _lblCustomerCountryFilter;
+        private RoundedComboBox? _cmbCustomerCountry;
         private ModernButton? _btnCustomerAdd;
         private ModernButton? _btnCustomerRefresh;
+
+        private RoundedPanel? _customersTableCard;
+        private Label? _lblCustomerTableTitle;
+        private Label? _lblCustomerHint;
+        private RoundedPanel? _customersGridWrapper;
+        private DataGridView? _gridCustomers;
+        private DarkScrollBar? _customerScrollBar;
+        private int _hoveredCustomerRowIndex = -1;
+        private string _customerSortColumn = "ID";
+        private bool _customerSortAscending = true;
+        private List<Customer> _allLoadedCustomers = new();
+        private List<Customer> _currentFilteredCustomers = new();
 
         // Messages Page Controls
         private RoundedPanel? _messagesHeaderCard;
@@ -128,6 +152,9 @@ namespace PROJECT_SBV1.Forms
 
         // Settings Page Controls
         private RoundedPanel? _settingsThemeCard;
+        private RoundedPanel? _settingsCompanyCard;
+        private RoundedPanel? _settingsCompanyPreviewPanel;
+        private Label? _lblSettingsCurrentTheme;
         private RoundedPanel? _settingsInfoCard;
         private RoundedPanel? _settingsSessionCard;
 
@@ -372,6 +399,8 @@ namespace PROJECT_SBV1.Forms
                 _txtSearchProduct?.ApplyTheme(ThemeManager.CurrentTheme);
                 _cmbProductCategory?.ApplyTheme(ThemeManager.CurrentTheme);
                 _cmbProductStatus?.ApplyTheme(ThemeManager.CurrentTheme);
+                _txtSearchCustomer?.ApplyTheme(ThemeManager.CurrentTheme);
+                _cmbCustomerCountry?.ApplyTheme(ThemeManager.CurrentTheme);
                 if (_btnRefreshBilling != null)
                 {
                     bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
@@ -401,6 +430,33 @@ namespace PROJECT_SBV1.Forms
                 if (_gridInvoices != null)
                 {
                     _gridInvoices.Invalidate();
+                }
+
+                if (_customersGridWrapper != null)
+                {
+                    bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
+                    _customersGridWrapper.CustomBackgroundColor = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(248, 250, 252);
+                    _customersGridWrapper.CustomBorderColor = isDark ? Color.FromArgb(42, 45, 65) : Color.FromArgb(226, 232, 240);
+                    _customersGridWrapper.Invalidate();
+                }
+                if (_customerScrollBar != null)
+                {
+                    _customerScrollBar.Invalidate();
+                }
+                if (_gridCustomers != null)
+                {
+                    _gridCustomers.Invalidate();
+                }
+
+                if (_lblSettingsCurrentTheme != null)
+                {
+                    _lblSettingsCurrentTheme.Text = $"Current Theme:  {ThemeManager.CurrentTheme}";
+                    _lblSettingsCurrentTheme.ForeColor = ThemeManager.AccentBlue;
+                }
+
+                if (_settingsCompanyPreviewPanel != null)
+                {
+                    _ = RefreshCompanySettingsPreviewAsync(_settingsCompanyPreviewPanel);
                 }
 
                 if (_contentPanel != null) _contentPanel.Invalidate(true);
@@ -648,17 +704,40 @@ namespace PROJECT_SBV1.Forms
             _allLoadedProducts.Clear();
             _currentFilteredProducts.Clear();
 
-            _gridCustomers = null;
-            _customersHeaderCard = null;
-            _customersTableCard = null;
+            _customerMetricCards.Clear();
+            _selectedCustomerCardIndex = -1;
+            _lblValTotalCustomers = null;
+            _lblValActiveCustomers = null;
+            _lblValTotalCities = null;
+            _lblValTotalCountries = null;
+            _lblTrendTotalCustomers = null;
+            _lblTrendActiveCustomers = null;
+            _lblTrendTotalCities = null;
+            _lblTrendTotalCountries = null;
+            _customersToolbarCard = null;
+            _txtSearchCustomer = null;
+            _lblCustomerCountryFilter = null;
+            _cmbCustomerCountry = null;
             _btnCustomerAdd = null;
             _btnCustomerRefresh = null;
+            _customersTableCard = null;
+            _lblCustomerTableTitle = null;
+            _lblCustomerHint = null;
+            _customersGridWrapper = null;
+            _gridCustomers = null;
+            _customerScrollBar = null;
+            _hoveredCustomerRowIndex = -1;
+            _allLoadedCustomers.Clear();
+            _currentFilteredCustomers.Clear();
 
             _messagesHeaderCard = null;
             _messagesListCard = null;
             _btnMessagesMarkAll = null;
 
             _settingsThemeCard = null;
+            _settingsCompanyCard = null;
+            _settingsCompanyPreviewPanel = null;
+            _lblSettingsCurrentTheme = null;
             _settingsInfoCard = null;
             _settingsSessionCard = null;
 
@@ -2707,8 +2786,8 @@ namespace PROJECT_SBV1.Forms
             _billingToolbarCard.Controls.Add(_btnProfileSettings);
             _btnProfileSettings.Click += (s, e) =>
             {
-                using var profDlg = new BusinessProfileDialog();
-                profDlg.ShowDialog(this);
+                using var designer = new InvoiceDesignerForm();
+                designer.ShowDialog(this);
             };
 
             // Refresh Button (Solid Dark Grey/Navy Button with ↻ icon matching Screenshot 1)
@@ -2842,24 +2921,26 @@ namespace PROJECT_SBV1.Forms
             _gridInvoices.Columns.Add("Paid", "Paid (₹)");
             _gridInvoices.Columns.Add("Balance", "Balance Due (₹)");
             _gridInvoices.Columns.Add("Status", "Status");
+            _gridInvoices.Columns.Add("Actions", "Actions");
 
             _gridInvoices.Columns[0].Visible = false;
-            _gridInvoices.Columns[1].Width = 140;
+            _gridInvoices.Columns[1].Width = 135;
             _gridInvoices.Columns[2].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            _gridInvoices.Columns[2].MinimumWidth = 240;
-            _gridInvoices.Columns[3].Width = 120;
-            _gridInvoices.Columns[4].Width = 120;
-            _gridInvoices.Columns[5].Width = 130;
-            _gridInvoices.Columns[6].Width = 130;
-            _gridInvoices.Columns[7].Width = 140;
-            _gridInvoices.Columns[8].Width = 130;
+            _gridInvoices.Columns[2].MinimumWidth = 200;
+            _gridInvoices.Columns[3].Width = 115;
+            _gridInvoices.Columns[4].Width = 115;
+            _gridInvoices.Columns[5].Width = 120;
+            _gridInvoices.Columns[6].Width = 120;
+            _gridInvoices.Columns[7].Width = 130;
+            _gridInvoices.Columns[8].Width = 120;
+            _gridInvoices.Columns[9].Width = 135;
 
             // Interactive Column Header Click -> Dynamic Sorting with Indicators
             _gridInvoices.ColumnHeaderMouseClick += (s, e) =>
             {
                 if (e.ColumnIndex < 0 || e.ColumnIndex >= _gridInvoices.Columns.Count) return;
                 string colName = _gridInvoices.Columns[e.ColumnIndex].Name;
-                if (colName == "InvoiceId") return;
+                if (colName == "InvoiceId" || colName == "Actions") return;
                 if (_billingSortColumn == colName)
                 {
                     _billingSortAscending = !_billingSortAscending;
@@ -2965,7 +3046,7 @@ namespace PROJECT_SBV1.Forms
                         var textRect = new Rectangle(e.CellBounds.Left, e.CellBounds.Top, e.CellBounds.Width - 14, e.CellBounds.Height);
                         e.Graphics.DrawString(headerText, fHeader, bHeader, textRect, sf);
                     }
-                    else if (e.ColumnIndex == 8)
+                    else if (e.ColumnIndex is 8 or 9)
                     {
                         sf.Alignment = StringAlignment.Center;
                         e.Graphics.DrawString(headerText, fHeader, bHeader, e.CellBounds, sf);
@@ -3216,6 +3297,127 @@ namespace PROJECT_SBV1.Forms
                         e.Handled = true;
                         return;
                     }
+
+                    // Column 9: Actions (Modern Bootstrap Edit & Del Action Pill Buttons)
+                    if (e.ColumnIndex == 9)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int btnW = 54;
+                        int btnH = 26;
+                        int gapBtn = 6;
+                        int totalBtnsW = btnW * 2 + gapBtn;
+                        int startX = e.CellBounds.Left + (e.CellBounds.Width - totalBtnsW) / 2;
+                        int btnY = e.CellBounds.Top + (e.CellBounds.Height - btnH) / 2;
+
+                        var rectEdit = new Rectangle(startX, btnY, btnW, btnH);
+                        var rectDel = new Rectangle(startX + btnW + gapBtn, btnY, btnW, btnH);
+
+                        // Edit Button (Bootstrap Info/Primary subtle pill)
+                        Color editBg = isDark ? Color.FromArgb(30, 48, 75) : Color.FromArgb(224, 238, 255);
+                        Color editBorder = isDark ? Color.FromArgb(45, 90, 150) : Color.FromArgb(180, 215, 255);
+                        Color editTextCol = isDark ? Color.FromArgb(96, 165, 250) : Color.FromArgb(29, 78, 216);
+
+                        using (var pEdit = CreateRoundedRectanglePath(rectEdit, 6))
+                        using (var bEdit = new SolidBrush(editBg))
+                        using (var penEdit = new Pen(editBorder, 1f))
+                        {
+                            e.Graphics.FillPath(bEdit, pEdit);
+                            e.Graphics.DrawPath(penEdit, pEdit);
+                        }
+                        using var fEditBtn = new Font("Segoe UI", 8f, FontStyle.Bold);
+                        using var bEditBtn = new SolidBrush(editTextCol);
+                        using var sfEditBtn = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString("Edit", fEditBtn, bEditBtn, rectEdit, sfEditBtn);
+
+                        // Delete Button (Bootstrap Danger subtle pill)
+                        Color delBg = isDark ? Color.FromArgb(55, 25, 30) : Color.FromArgb(254, 226, 226);
+                        Color delBorder = isDark ? Color.FromArgb(120, 35, 45) : Color.FromArgb(252, 165, 165);
+                        Color delTextCol = isDark ? Color.FromArgb(248, 113, 113) : Color.FromArgb(185, 28, 28);
+
+                        using (var pDel = CreateRoundedRectanglePath(rectDel, 6))
+                        using (var bDel = new SolidBrush(delBg))
+                        using (var penDel = new Pen(delBorder, 1f))
+                        {
+                            e.Graphics.FillPath(bDel, pDel);
+                            e.Graphics.DrawPath(penDel, pDel);
+                        }
+                        using var fDelBtn = new Font("Segoe UI", 8f, FontStyle.Bold);
+                        using var bDelBtn = new SolidBrush(delTextCol);
+                        using var sfDelBtn = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString("Del", fDelBtn, bDelBtn, rectDel, sfDelBtn);
+
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            };
+
+            // Inline Action buttons click: Edit & Delete
+            _gridInvoices.CellMouseClick += async (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.RowIndex >= _gridInvoices.Rows.Count) return;
+                if (e.ColumnIndex == 9 && e.Button == MouseButtons.Left)
+                {
+                    var row = _gridInvoices.Rows[e.RowIndex];
+                    if (row.Cells[0].Value == null) return;
+                    int invId = Convert.ToInt32(row.Cells[0].Value);
+
+                    var cellBounds = _gridInvoices.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false);
+                    int btnW = 54;
+                    int btnH = 26;
+                    int gapBtn = 6;
+                    int startX = (cellBounds.Width - (btnW * 2 + gapBtn)) / 2;
+                    int editEndX = startX + btnW;
+                    int delStartX = editEndX + gapBtn;
+                    int delEndX = delStartX + btnW;
+
+                    int btnY = (cellBounds.Height - btnH) / 2;
+                    if (e.Y >= btnY && e.Y <= btnY + btnH)
+                    {
+                        if (e.X >= startX && e.X <= editEndX)
+                        {
+                            // Edit Action
+                            var invoice = await _billingService.GetInvoiceByIdAsync(invId);
+                            if (invoice != null)
+                            {
+                                using var dlg = new InvoiceForm(invoice);
+                                if (dlg.ShowDialog(this) == DialogResult.OK)
+                                {
+                                    await ReloadBillingDataAsync();
+                                }
+                            }
+                        }
+                        else if (e.X >= delStartX && e.X <= delEndX)
+                        {
+                            // Delete Action
+                            string invNo = row.Cells[1].Value?.ToString() ?? $"#{invId}";
+                            if (MessageBox.Show($"Are you sure you want to delete invoice '{invNo}'?\n\nThis will permanently delete this invoice and all associated items and payments.", "Confirm Delete Invoice", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                            {
+                                bool success = await _billingService.DeleteInvoiceAsync(invId);
+                                if (success)
+                                {
+                                    await ReloadBillingDataAsync();
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Failed to delete invoice.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Cursor styling for action buttons
+            _gridInvoices.CellMouseMove += (s, e) =>
+            {
+                if (e.RowIndex >= 0 && e.ColumnIndex == 9)
+                {
+                    _gridInvoices.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    _gridInvoices.Cursor = Cursors.Default;
                 }
             };
 
@@ -3298,6 +3500,12 @@ namespace PROJECT_SBV1.Forms
                             }
                         });
 
+                        ctx.Items.Add("🏢 Update Company & Invoice Details", null, (_, _) =>
+                        {
+                            using var designer = new InvoiceDesignerForm();
+                            designer.ShowDialog(this);
+                        });
+
                         ctx.Items.Add("📄 Export PDF", null, async (_, _) =>
                         {
                             var invoice = await _billingService.GetInvoiceByIdAsync(invId);
@@ -3340,6 +3548,23 @@ namespace PROJECT_SBV1.Forms
                             {
                                 await _billingService.CancelInvoiceAsync(invId, "Cancelled by user");
                                 await ReloadBillingDataAsync();
+                            }
+                        });
+
+                        ctx.Items.Add("🗑️ Delete Invoice", null, async (_, _) =>
+                        {
+                            string invNo = row.Cells[1].Value?.ToString() ?? $"#{invId}";
+                            if (MessageBox.Show($"Are you sure you want to delete invoice '{invNo}'?\n\nThis will permanently delete this invoice and all associated items and payments.", "Confirm Delete Invoice", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                            {
+                                bool success = await _billingService.DeleteInvoiceAsync(invId);
+                                if (success)
+                                {
+                                    await ReloadBillingDataAsync();
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Failed to delete invoice.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
                             }
                         });
 
@@ -3674,7 +3899,8 @@ namespace PROJECT_SBV1.Forms
                     $"₹{inv.GrandTotal:N2}",
                     $"₹{inv.AmountPaid:N2}",
                     $"₹{inv.BalanceDue:N2}",
-                    inv.Status
+                    inv.Status,
+                    ""
                 );
             }
 
@@ -5073,78 +5299,193 @@ namespace PROJECT_SBV1.Forms
         #region Customers Page
         private void LoadCustomersPage()
         {
-            _customersHeaderCard = new RoundedPanel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(1060, 70),
-                BorderRadius = 14,
-                BorderWidth = 1
-            };
-            _themeCards.Add(_customersHeaderCard);
+            int contentWidth = Math.Max(1050, _contentPanel.ClientSize.Width - 50);
+            int cardHeight = 110;
+            int gap = 10;
+            int totalGaps = gap * 3;
+            int baseWidth = (contentWidth - totalGaps) / 4;
+            int remainder = (contentWidth - totalGaps) % 4;
+            int currentX = 0;
 
-            var lblTitle = new Label
-            {
-                Text = "👥  Customer Management",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-                ForeColor = ThemeManager.TextPrimary,
-                Location = new Point(18, 20),
-                AutoSize = true
-            };
-            _customersHeaderCard.Controls.Add(lblTitle);
-            _themeTitleLabels.Add(lblTitle);
+            // 1. TOP METRICS ROW: 4 Live Interactive KPI Cards (Bootstrap 5 Card Deck)
+            int w0 = baseWidth + (0 < remainder ? 1 : 0);
+            var cardTotal = CreateMetricCard("Total Customers", "0 Registered", "Enterprise accounts", true, "👥", currentX, 0, w0, cardHeight, out _lblValTotalCustomers!, out _lblTrendTotalCustomers!);
+            currentX += w0 + gap;
+            _customerMetricCards.Add(cardTotal);
+            _contentPanel.Controls.Add(cardTotal);
 
-            var txtSearch = new TextBox
-            {
-                PlaceholderText = "🔍  Search customers by name, city, or email...",
-                Font = new Font("Segoe UI", 10f),
-                Size = new Size(300, 30),
-                Location = new Point(380, 18),
-                BackColor = ThemeManager.CardBg,
-                ForeColor = ThemeManager.TextPrimary,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            _customersHeaderCard.Controls.Add(txtSearch);
-            _themeTextBoxes.Add(txtSearch);
+            int w1 = baseWidth + (1 < remainder ? 1 : 0);
+            var cardActive = CreateMetricCard("Active Accounts", "0 Active", "100% operational status", true, "⭐", currentX, 0, w1, cardHeight, out _lblValActiveCustomers!, out _lblTrendActiveCustomers!);
+            currentX += w1 + gap;
+            _customerMetricCards.Add(cardActive);
+            _contentPanel.Controls.Add(cardActive);
 
+            int w2 = baseWidth + (2 < remainder ? 1 : 0);
+            var cardCities = CreateMetricCard("Cities Covered", "0 Cities", "Metropolitan coverage", true, "🏙️", currentX, 0, w2, cardHeight, out _lblValTotalCities!, out _lblTrendTotalCities!);
+            currentX += w2 + gap;
+            _customerMetricCards.Add(cardCities);
+            _contentPanel.Controls.Add(cardCities);
+
+            int w3 = baseWidth + (3 < remainder ? 1 : 0);
+            var cardCountries = CreateMetricCard("Global Countries", "0 Countries", "International presence", true, "🌐", currentX, 0, w3, cardHeight, out _lblValTotalCountries!, out _lblTrendTotalCountries!);
+            _customerMetricCards.Add(cardCountries);
+            _contentPanel.Controls.Add(cardCountries);
+
+            cardTotal.OnCardClicked = (c) => SelectCustomerFilter(0);
+            cardActive.OnCardClicked = (c) => SelectCustomerFilter(1);
+            cardCities.OnCardClicked = (c) => SelectCustomerFilter(2);
+            cardCountries.OnCardClicked = (c) => SelectCustomerFilter(3);
+
+            // 2. QUICK ACTIONS & FILTER TOOLBAR (Bootstrap Toolbar Card)
+            int toolbarY = cardHeight + 14;
+            _customersToolbarCard = new RoundedPanel
+            {
+                Location = new Point(0, toolbarY),
+                Size = new Size(contentWidth, 68),
+                BorderRadius = 12,
+                BorderWidth = 1,
+                CustomBackgroundColor = ThemeManager.CardBg,
+                CustomBorderColor = ThemeManager.CardBorder
+            };
+            _themeCards.Add(_customersToolbarCard);
+            _contentPanel.Controls.Add(_customersToolbarCard);
+
+            // Modern Rounded Search Box with icon and clear button
+            _txtSearchCustomer = new RoundedSearchBox
+            {
+                PlaceholderText = "Search by customer name, email, city, country, or ID...",
+                Font = new Font("Segoe UI", 9f),
+                Size = new Size(330, 34),
+                Location = new Point(16, 17),
+                BorderRadius = 8
+            };
+            _txtSearchCustomer.ApplyTheme(ThemeManager.CurrentTheme);
+            _customersToolbarCard.Controls.Add(_txtSearchCustomer);
+
+            // Country Filter Dropdown
+            _lblCustomerCountryFilter = new Label
+            {
+                Text = "Country:",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = ThemeManager.TextSecondary,
+                Location = new Point(365, 25),
+                AutoSize = true,
+                Cursor = Cursors.Hand
+            };
+            _lblCustomerCountryFilter.Click += (s, e) => { if (_cmbCustomerCountry != null) _cmbCustomerCountry.SelectedIndex = 0; };
+            _customersToolbarCard.Controls.Add(_lblCustomerCountryFilter);
+            _themeSubLabels.Add(_lblCustomerCountryFilter);
+
+            _cmbCustomerCountry = new RoundedComboBox
+            {
+                Size = new Size(160, 34),
+                Location = new Point(428, 17),
+                BorderRadius = 8
+            };
+            _cmbCustomerCountry.Items.Add("All Countries");
+            _cmbCustomerCountry.SelectedIndex = 0;
+            _cmbCustomerCountry.ApplyTheme(ThemeManager.CurrentTheme);
+            _customersToolbarCard.Controls.Add(_cmbCustomerCountry);
+
+            // + Add Customer (Bootstrap 5 Green Button)
             _btnCustomerAdd = new ModernButton
             {
                 Text = "+ Add Customer",
-                NormalColor = ThemeManager.AccentGreen,
-                HoverColor = Color.FromArgb(20, 200, 140),
-                Size = new Size(150, 34),
-                Location = new Point(700, 17),
+                NormalColor = Color.FromArgb(16, 185, 129),
+                HoverColor = Color.FromArgb(5, 150, 105),
+                PressedColor = Color.FromArgb(4, 120, 87),
+                UseGradient = false,
+                HasGlowOnHover = false,
+                Size = new Size(140, 34),
+                Location = new Point(contentWidth - 250, 17),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                BorderRadius = 10
+                BorderRadius = 8,
+                ForeColor = Color.White
             };
-            _customersHeaderCard.Controls.Add(_btnCustomerAdd);
+            _customersToolbarCard.Controls.Add(_btnCustomerAdd);
+            _btnCustomerAdd.Click += (s, e) => ShowCustomerDialog(null);
 
+            // Refresh Button (Bootstrap 5 Blue Button)
             _btnCustomerRefresh = new ModernButton
             {
                 Text = "↻ Refresh",
-                NormalColor = ThemeManager.AccentBlue,
-                HoverColor = Color.FromArgb(100, 130, 255),
-                Size = new Size(100, 34),
-                Location = new Point(860, 17),
+                NormalColor = Color.FromArgb(37, 99, 235),
+                HoverColor = Color.FromArgb(29, 78, 216),
+                PressedColor = Color.FromArgb(30, 64, 175),
+                UseGradient = false,
+                HasGlowOnHover = false,
+                Size = new Size(95, 34),
+                Location = new Point(contentWidth - 100, 17),
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                BorderRadius = 10
+                BorderRadius = 8,
+                ForeColor = Color.White
             };
-            _customersHeaderCard.Controls.Add(_btnCustomerRefresh);
-            _contentPanel.Controls.Add(_customersHeaderCard);
+            _customersToolbarCard.Controls.Add(_btnCustomerRefresh);
+            _btnCustomerRefresh.Click += async (s, e) => await LoadCustomerData();
 
-            // Customers Grid Card
+            // 3. TABLE CARD & CONTAINER
+            int tableY = toolbarY + 68 + 14;
+            int tableHeight = Math.Max(420, _contentPanel.ClientSize.Height - tableY - 20);
+
             _customersTableCard = new RoundedPanel
             {
-                Location = new Point(0, 85),
-                Size = new Size(1060, 550),
+                Location = new Point(0, tableY),
+                Size = new Size(contentWidth, tableHeight),
                 BorderRadius = 14,
-                BorderWidth = 1
+                BorderWidth = 1,
+                CustomBackgroundColor = ThemeManager.CardBg,
+                CustomBorderColor = ThemeManager.CardBorder
             };
             _themeCards.Add(_customersTableCard);
+            _contentPanel.Controls.Add(_customersTableCard);
 
+            // Card Header: Title & Hint
+            _lblCustomerTableTitle = new Label
+            {
+                Text = "👥  Customer Directory Register",
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                ForeColor = ThemeManager.TextPrimary,
+                Location = new Point(18, 14),
+                AutoSize = true
+            };
+            _customersTableCard.Controls.Add(_lblCustomerTableTitle);
+            _themeTitleLabels.Add(_lblCustomerTableTitle);
+
+            _lblCustomerHint = new Label
+            {
+                Text = "Showing registered customers • Click column to sort • Edit/Del buttons active",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = ThemeManager.TextSecondary,
+                Location = new Point(Math.Max(280, contentWidth - 460), 16),
+                AutoSize = true
+            };
+            _customersTableCard.Controls.Add(_lblCustomerHint);
+            _themeSubLabels.Add(_lblCustomerHint);
+
+            // Rounded Table Wrapper for crisp rounded corner border clipping
+            _customersGridWrapper = new RoundedPanel
+            {
+                Location = new Point(16, 44),
+                Size = new Size(contentWidth - 32, tableHeight - 60),
+                BorderRadius = 8,
+                BorderWidth = 1,
+                CustomBackgroundColor = ThemeManager.CardBg,
+                CustomBorderColor = ThemeManager.CardBorder
+            };
+            _themeCards.Add(_customersGridWrapper);
+            _customersTableCard.Controls.Add(_customersGridWrapper);
+
+            // Bootstrap 5 Styled DataGridView
             _gridCustomers = CreateStyledGrid();
-            _gridCustomers.ScrollBars = ScrollBars.Vertical;
-            _gridCustomers.Location = new Point(18, 18);
-            _gridCustomers.Size = new Size(1024, 510);
+            _gridCustomers.Location = new Point(1, 1);
+            _gridCustomers.Size = new Size(_customersGridWrapper.Width - 11, _customersGridWrapper.Height - 2);
+            _gridCustomers.RowTemplate.Height = 40;
+            _gridCustomers.ColumnHeadersHeight = 38;
+            _gridCustomers.CellBorderStyle = DataGridViewCellBorderStyle.Single;
+            _gridCustomers.GridColor = Color.FromArgb(226, 232, 240);
+            _gridCustomers.BorderStyle = BorderStyle.None;
+            _gridCustomers.EnableHeadersVisualStyles = false;
+            _gridCustomers.ScrollBars = ScrollBars.None;
 
             _gridCustomers.Columns.Add("ID", "ID");
             _gridCustomers.Columns.Add("Name", "Customer Name");
@@ -5152,49 +5493,500 @@ namespace PROJECT_SBV1.Forms
             _gridCustomers.Columns.Add("Phone", "Phone");
             _gridCustomers.Columns.Add("City", "City");
             _gridCustomers.Columns.Add("Country", "Country");
+            _gridCustomers.Columns.Add("Actions", "Actions");
 
-            _gridCustomers.Columns[0].Width = 60;
+            _gridCustomers.Columns[0].Width = 70;
             _gridCustomers.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             _gridCustomers.Columns[1].MinimumWidth = 200;
-            _gridCustomers.Columns[2].Width = 240;
-            _gridCustomers.Columns[3].Width = 160;
-            _gridCustomers.Columns[4].Width = 150;
-            _gridCustomers.Columns[5].Width = 120;
+            _gridCustomers.Columns[2].Width = 230;
+            _gridCustomers.Columns[3].Width = 150;
+            _gridCustomers.Columns[4].Width = 140;
+            _gridCustomers.Columns[5].Width = 140;
+            _gridCustomers.Columns[6].Width = 150;
 
-            _customersTableCard.Controls.Add(_gridCustomers);
-            _contentPanel.Controls.Add(_customersTableCard);
-
-            UpdateCustomersLayout();
-
-            _ = LoadCustomerData();
-
-            txtSearch.TextChanged += async (s, e) =>
+            // Sorting by Column Header Click
+            _gridCustomers.ColumnHeaderMouseClick += (s, e) =>
             {
-                var customers = await _dbService.GetCustomersAsync(txtSearch.Text);
-                RefreshCustomerGrid(customers);
+                if (e.ColumnIndex < 0 || e.ColumnIndex >= _gridCustomers.Columns.Count) return;
+                string colName = _gridCustomers.Columns[e.ColumnIndex].Name;
+                if (colName == "Actions") return;
+
+                if (_customerSortColumn == colName)
+                {
+                    _customerSortAscending = !_customerSortAscending;
+                }
+                else
+                {
+                    _customerSortColumn = colName;
+                    _customerSortAscending = true;
+                }
+                ApplyCustomerSorting();
+                _gridCustomers.Invalidate();
             };
 
-            if (_btnCustomerAdd != null) _btnCustomerAdd.Click += (s, e) => ShowCustomerDialog(null);
-            if (_btnCustomerRefresh != null) _btnCustomerRefresh.Click += async (s, e) => await LoadCustomerData();
+            // Smooth Bootstrap Row Hover Highlighting
+            _gridCustomers.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex >= 0 && _hoveredCustomerRowIndex != e.RowIndex)
+                {
+                    int old = _hoveredCustomerRowIndex;
+                    _hoveredCustomerRowIndex = e.RowIndex;
+                    if (old >= 0 && old < _gridCustomers.Rows.Count) _gridCustomers.InvalidateRow(old);
+                    _gridCustomers.InvalidateRow(e.RowIndex);
+                }
+            };
 
+            _gridCustomers.CellMouseLeave += (s, e) =>
+            {
+                if (_hoveredCustomerRowIndex >= 0 && _hoveredCustomerRowIndex < _gridCustomers.Rows.Count)
+                {
+                    int old = _hoveredCustomerRowIndex;
+                    _hoveredCustomerRowIndex = -1;
+                    _gridCustomers.InvalidateRow(old);
+                }
+                _gridCustomers.Cursor = Cursors.Default;
+            };
+
+            // Custom Cell Painting: Bootstrap 5 Table Styling
+            _gridCustomers.CellPainting += (s, e) =>
+            {
+                if (e.Graphics == null) return;
+                bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
+
+                // 1. Column Headers
+                if (e.RowIndex == -1)
+                {
+                    bool isSortedCol = (e.ColumnIndex >= 0 && e.ColumnIndex < _gridCustomers.Columns.Count && _gridCustomers.Columns[e.ColumnIndex].Name == _customerSortColumn);
+
+                    Color headerBg = isSortedCol
+                        ? Color.FromArgb(2, 132, 199)
+                        : (isDark ? Color.FromArgb(24, 27, 40) : Color.FromArgb(248, 250, 252));
+                    Color headerTextColor = isSortedCol
+                        ? Color.White
+                        : (isDark ? Color.FromArgb(203, 213, 225) : Color.FromArgb(71, 85, 105));
+
+                    using (var b = new SolidBrush(headerBg))
+                    {
+                        e.Graphics.FillRectangle(b, e.CellBounds);
+                    }
+
+                    Color divColor = isSortedCol
+                        ? Color.FromArgb(3, 105, 161)
+                        : (isDark ? Color.FromArgb(42, 45, 65) : Color.FromArgb(226, 232, 240));
+                    using (var divPen = new Pen(divColor, 1f))
+                    {
+                        e.Graphics.DrawLine(divPen, e.CellBounds.Right - 1, e.CellBounds.Top, e.CellBounds.Right - 1, e.CellBounds.Bottom - 1);
+                        e.Graphics.DrawLine(divPen, e.CellBounds.Left, e.CellBounds.Bottom - 1, e.CellBounds.Right, e.CellBounds.Bottom - 1);
+                    }
+
+                    string headerText = (e.ColumnIndex >= 0 && e.ColumnIndex < _gridCustomers.Columns.Count) ? _gridCustomers.Columns[e.ColumnIndex].HeaderText : "";
+                    using var fHeader = new Font("Segoe UI", 9f, FontStyle.Bold);
+                    using var bHeader = new SolidBrush(headerTextColor);
+                    using var sf = new StringFormat { LineAlignment = StringAlignment.Center };
+
+                    if (e.ColumnIndex == 0 || e.ColumnIndex == 4 || e.ColumnIndex == 5 || e.ColumnIndex == 6)
+                    {
+                        sf.Alignment = StringAlignment.Center;
+                        e.Graphics.DrawString(headerText, fHeader, bHeader, e.CellBounds, sf);
+                    }
+                    else
+                    {
+                        sf.Alignment = StringAlignment.Near;
+                        var textRect = new Rectangle(e.CellBounds.Left + 14, e.CellBounds.Top, e.CellBounds.Width - 14, e.CellBounds.Height);
+                        e.Graphics.DrawString(headerText, fHeader, bHeader, textRect, sf);
+                    }
+
+                    // Sort arrow on sorted column
+                    if (isSortedCol)
+                    {
+                        using var sortBrush = new SolidBrush(Color.White);
+                        PointF[] pts = _customerSortAscending
+                            ? new PointF[] { new(e.CellBounds.Right - 18, e.CellBounds.Y + 22), new(e.CellBounds.Right - 13, e.CellBounds.Y + 15), new(e.CellBounds.Right - 8, e.CellBounds.Y + 22) }
+                            : new PointF[] { new(e.CellBounds.Right - 18, e.CellBounds.Y + 15), new(e.CellBounds.Right - 13, e.CellBounds.Y + 22), new(e.CellBounds.Right - 8, e.CellBounds.Y + 15) };
+                        e.Graphics.FillPolygon(sortBrush, pts);
+                    }
+
+                    e.Handled = true;
+                    return;
+                }
+
+                // 2. Data Rows
+                if (e.RowIndex >= 0)
+                {
+                    bool isSelected = (e.State & DataGridViewElementStates.Selected) == DataGridViewElementStates.Selected;
+                    bool isHovered = (e.RowIndex == _hoveredCustomerRowIndex);
+
+                    Color rowBg;
+                    if (isDark)
+                    {
+                        rowBg = isSelected
+                            ? Color.FromArgb(42, 52, 85)
+                            : (isHovered
+                                ? Color.FromArgb(32, 38, 60)
+                                : (e.RowIndex % 2 == 0 ? Color.FromArgb(20, 22, 33) : Color.FromArgb(24, 27, 40)));
+                    }
+                    else
+                    {
+                        rowBg = isSelected
+                            ? Color.FromArgb(232, 238, 255)
+                            : (isHovered
+                                ? Color.FromArgb(243, 246, 255)
+                                : (e.RowIndex % 2 == 0 ? Color.White : Color.FromArgb(248, 250, 252)));
+                    }
+
+                    using (var brush = new SolidBrush(rowBg))
+                    {
+                        e.Graphics.FillRectangle(brush, e.CellBounds);
+                    }
+
+                    // Neon Left Accent Bar on Hover/Selected (Column 0)
+                    if (e.ColumnIndex == 0 && (isHovered || isSelected))
+                    {
+                        using var activeBar = new SolidBrush(Color.FromArgb(14, 165, 233));
+                        e.Graphics.FillRectangle(activeBar, e.CellBounds.Left, e.CellBounds.Top, 3.5f, e.CellBounds.Height);
+                    }
+
+                    // 1px dividers
+                    Color lineBorder = isDark ? Color.FromArgb(36, 40, 60) : Color.FromArgb(226, 232, 240);
+                    using (var linePen = new Pen(lineBorder, 1f))
+                    {
+                        e.Graphics.DrawLine(linePen, e.CellBounds.Left, e.CellBounds.Bottom - 1, e.CellBounds.Right, e.CellBounds.Bottom - 1);
+                        e.Graphics.DrawLine(linePen, e.CellBounds.Right - 1, e.CellBounds.Top, e.CellBounds.Right - 1, e.CellBounds.Bottom - 1);
+                    }
+
+                    string cellVal = e.Value?.ToString() ?? "";
+
+                    // Column 0: Centered Modern ID Tag
+                    if (e.ColumnIndex == 0)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int idW = 46;
+                        int idH = 22;
+                        var idRect = new Rectangle(e.CellBounds.Left + (e.CellBounds.Width - idW) / 2, e.CellBounds.Top + (e.CellBounds.Height - idH) / 2, idW, idH);
+                        using (var path = CreateRoundedRectanglePath(idRect, 6))
+                        {
+                            Color idBg = isDark ? Color.FromArgb(32, 38, 58) : Color.FromArgb(241, 245, 249);
+                            Color idBorder = isDark ? Color.FromArgb(48, 56, 82) : Color.FromArgb(226, 232, 240);
+                            using var bId = new SolidBrush(idBg);
+                            using var pId = new Pen(idBorder, 1f);
+                            e.Graphics.FillPath(bId, path);
+                            e.Graphics.DrawPath(pId, path);
+                        }
+                        Color idTextCol = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(71, 85, 105);
+                        using var fId = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+                        using var bIdText = new SolidBrush(idTextCol);
+                        using var sfId = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString($"#{cellVal}", fId, bIdText, idRect, sfId);
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 1: Colorful Initial Avatar + Customer Name
+                    if (e.ColumnIndex == 1)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int avatarSize = 26;
+                        int avatarX = e.CellBounds.Left + 12;
+                        int avatarY = e.CellBounds.Top + (e.CellBounds.Height - avatarSize) / 2;
+                        var avatarRect = new Rectangle(avatarX, avatarY, avatarSize, avatarSize);
+
+                        Color gradStart = GetAvatarStartColor(cellVal);
+                        Color gradEnd = GetAvatarEndColor(cellVal);
+
+                        using (var avBrush = new LinearGradientBrush(avatarRect, gradStart, gradEnd, 45f))
+                        {
+                            e.Graphics.FillEllipse(avBrush, avatarRect);
+                        }
+
+                        string initial = string.IsNullOrEmpty(cellVal) ? "C" : cellVal.Substring(0, 1).ToUpperInvariant();
+                        using (var fInit = new Font("Segoe UI", 9f, FontStyle.Bold))
+                        using (var bInit = new SolidBrush(Color.White))
+                        using (var sfInit = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                        {
+                            e.Graphics.DrawString(initial, fInit, bInit, avatarRect, sfInit);
+                        }
+
+                        Color nameCol = isDark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+                        var nameRect = new Rectangle(avatarX + avatarSize + 10, e.CellBounds.Top, e.CellBounds.Width - (avatarSize + 24), e.CellBounds.Height);
+                        using var fName = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                        using var bName = new SolidBrush(nameCol);
+                        using var sfName = new StringFormat { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
+                        e.Graphics.DrawString(cellVal, fName, bName, nameRect, sfName);
+
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 2: Email
+                    if (e.ColumnIndex == 2)
+                    {
+                        Color emailCol = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(71, 85, 105);
+                        var textRect = new Rectangle(e.CellBounds.Left + 14, e.CellBounds.Top, e.CellBounds.Width - 18, e.CellBounds.Height);
+                        using var fEmail = new Font("Segoe UI", 9f, FontStyle.Regular);
+                        using var bEmail = new SolidBrush(emailCol);
+                        using var sfEmail = new StringFormat { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
+                        e.Graphics.DrawString(cellVal, fEmail, bEmail, textRect, sfEmail);
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 3: Phone
+                    if (e.ColumnIndex == 3)
+                    {
+                        Color phoneCol = isDark ? Color.FromArgb(203, 213, 225) : Color.FromArgb(51, 65, 85);
+                        var textRect = new Rectangle(e.CellBounds.Left + 14, e.CellBounds.Top, e.CellBounds.Width - 18, e.CellBounds.Height);
+                        using var fPhone = new Font("Segoe UI", 9f, FontStyle.Regular);
+                        using var bPhone = new SolidBrush(phoneCol);
+                        using var sfPhone = new StringFormat { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
+                        e.Graphics.DrawString(cellVal, fPhone, bPhone, textRect, sfPhone);
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 4: City (Bootstrap soft pill badge)
+                    if (e.ColumnIndex == 4)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int pillH = 24;
+                        int pillW = Math.Min(e.CellBounds.Width - 16, 120);
+                        int pillX = e.CellBounds.Left + (e.CellBounds.Width - pillW) / 2;
+                        int pillY = e.CellBounds.Top + (e.CellBounds.Height - pillH) / 2;
+                        var pillRect = new Rectangle(pillX, pillY, pillW, pillH);
+
+                        Color pillBg = isDark ? Color.FromArgb(30, 41, 59) : Color.FromArgb(241, 245, 249);
+                        Color pillBorder = isDark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
+                        Color textCol = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(71, 85, 105);
+
+                        using (var path = CreateRoundedRectanglePath(pillRect, 6))
+                        using (var brush = new SolidBrush(pillBg))
+                        using (var pen = new Pen(pillBorder, 1f))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                            e.Graphics.DrawPath(pen, path);
+                        }
+
+                        using var fCity = new Font("Segoe UI", 8.5f, FontStyle.Regular);
+                        using var bText = new SolidBrush(textCol);
+                        using var sfCity = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString(cellVal, fCity, bText, pillRect, sfCity);
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 5: Country (Bootstrap 5 .badge rounded-pill with Glowing Dot)
+                    if (e.ColumnIndex == 5)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int pillH = 24;
+                        int pillW = Math.Min(e.CellBounds.Width - 20, 110);
+                        int pillX = e.CellBounds.Left + (e.CellBounds.Width - pillW) / 2;
+                        int pillY = e.CellBounds.Top + (e.CellBounds.Height - pillH) / 2;
+                        var pillRect = new Rectangle(pillX, pillY, pillW, pillH);
+
+                        string cUpper = cellVal.Trim().ToUpperInvariant();
+                        Color dotCol;
+                        Color pillBg;
+                        Color pillBorder;
+                        Color textCol;
+
+                        if (cUpper.Contains("USA") || cUpper.Contains("US"))
+                        {
+                            dotCol = Color.FromArgb(16, 185, 129); // Emerald
+                            pillBg = isDark ? Color.FromArgb(6, 78, 59) : Color.FromArgb(209, 250, 229);
+                            pillBorder = isDark ? Color.FromArgb(5, 150, 105) : Color.FromArgb(110, 231, 183);
+                            textCol = isDark ? Color.FromArgb(52, 211, 153) : Color.FromArgb(6, 95, 70);
+                        }
+                        else if (cUpper.Contains("UK") || cUpper.Contains("BRITAIN") || cUpper.Contains("ENGLAND"))
+                        {
+                            dotCol = Color.FromArgb(14, 165, 233); // Sky Blue
+                            pillBg = isDark ? Color.FromArgb(12, 74, 110) : Color.FromArgb(224, 242, 254);
+                            pillBorder = isDark ? Color.FromArgb(2, 132, 199) : Color.FromArgb(125, 211, 252);
+                            textCol = isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(7, 89, 133);
+                        }
+                        else if (cUpper.Contains("GERMANY") || cUpper.Contains("DE"))
+                        {
+                            dotCol = Color.FromArgb(245, 158, 11); // Amber
+                            pillBg = isDark ? Color.FromArgb(69, 26, 3) : Color.FromArgb(254, 243, 199);
+                            pillBorder = isDark ? Color.FromArgb(217, 119, 6) : Color.FromArgb(252, 211, 77);
+                            textCol = isDark ? Color.FromArgb(251, 191, 36) : Color.FromArgb(146, 64, 14);
+                        }
+                        else if (cUpper.Contains("CANADA") || cUpper.Contains("CA"))
+                        {
+                            dotCol = Color.FromArgb(244, 63, 94); // Rose
+                            pillBg = isDark ? Color.FromArgb(76, 5, 25) : Color.FromArgb(255, 228, 230);
+                            pillBorder = isDark ? Color.FromArgb(225, 29, 72) : Color.FromArgb(253, 164, 175);
+                            textCol = isDark ? Color.FromArgb(251, 113, 133) : Color.FromArgb(159, 18, 57);
+                        }
+                        else
+                        {
+                            dotCol = Color.FromArgb(99, 102, 241); // Indigo
+                            pillBg = isDark ? Color.FromArgb(30, 27, 75) : Color.FromArgb(224, 231, 255);
+                            pillBorder = isDark ? Color.FromArgb(79, 70, 229) : Color.FromArgb(165, 180, 252);
+                            textCol = isDark ? Color.FromArgb(129, 140, 248) : Color.FromArgb(55, 48, 163);
+                        }
+
+                        using (var path = CreateRoundedRectanglePath(pillRect, 10))
+                        using (var brush = new SolidBrush(pillBg))
+                        using (var pen = new Pen(pillBorder, 1f))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                            e.Graphics.DrawPath(pen, path);
+                        }
+
+                        int dotSize = 6;
+                        int dotX = pillX + 10;
+                        int dotY = pillY + (pillH - dotSize) / 2;
+                        using (var bDot = new SolidBrush(dotCol))
+                        {
+                            e.Graphics.FillEllipse(bDot, dotX, dotY, dotSize, dotSize);
+                        }
+
+                        var textRect = new Rectangle(dotX + dotSize + 6, pillY, pillW - (dotSize + 16), pillH);
+                        using var fBadge = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+                        using var bText = new SolidBrush(textCol);
+                        using var sfPill = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString(cellVal, fBadge, bText, textRect, sfPill);
+                        e.Handled = true;
+                        return;
+                    }
+
+                    // Column 6: Actions — 2 Dedicated Bootstrap-Styled Action Buttons (Edit & Delete)
+                    if (e.ColumnIndex == 6)
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        int btnW = 58;
+                        int btnH = 26;
+                        int gapBtn = 6;
+                        int startX = e.CellBounds.Left + (e.CellBounds.Width - (btnW * 2 + gapBtn)) / 2;
+                        int btnY = e.CellBounds.Top + (e.CellBounds.Height - btnH) / 2;
+
+                        var rectEdit = new Rectangle(startX, btnY, btnW, btnH);
+                        var rectDel = new Rectangle(startX + btnW + gapBtn, btnY, btnW, btnH);
+
+                        // Edit Button (Bootstrap Info/Primary subtle pill)
+                        Color editBg = isDark ? Color.FromArgb(30, 48, 75) : Color.FromArgb(224, 238, 255);
+                        Color editBorder = isDark ? Color.FromArgb(45, 90, 150) : Color.FromArgb(180, 215, 255);
+                        Color editTextCol = isDark ? Color.FromArgb(96, 165, 250) : Color.FromArgb(29, 78, 216);
+
+                        using (var pEdit = CreateRoundedRectanglePath(rectEdit, 6))
+                        using (var bEdit = new SolidBrush(editBg))
+                        using (var penEdit = new Pen(editBorder, 1f))
+                        {
+                            e.Graphics.FillPath(bEdit, pEdit);
+                            e.Graphics.DrawPath(penEdit, pEdit);
+                        }
+                        using var fEditBtn = new Font("Segoe UI", 8f, FontStyle.Bold);
+                        using var bEditBtn = new SolidBrush(editTextCol);
+                        using var sfEditBtn = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString("Edit", fEditBtn, bEditBtn, rectEdit, sfEditBtn);
+
+                        // Delete Button (Bootstrap Danger subtle pill)
+                        Color delBg = isDark ? Color.FromArgb(55, 25, 30) : Color.FromArgb(254, 226, 226);
+                        Color delBorder = isDark ? Color.FromArgb(120, 35, 45) : Color.FromArgb(252, 165, 165);
+                        Color delTextCol = isDark ? Color.FromArgb(248, 113, 113) : Color.FromArgb(185, 28, 28);
+
+                        using (var pDel = CreateRoundedRectanglePath(rectDel, 6))
+                        using (var bDel = new SolidBrush(delBg))
+                        using (var penDel = new Pen(delBorder, 1f))
+                        {
+                            e.Graphics.FillPath(bDel, pDel);
+                            e.Graphics.DrawPath(penDel, pDel);
+                        }
+                        using var fDelBtn = new Font("Segoe UI", 8f, FontStyle.Bold);
+                        using var bDelBtn = new SolidBrush(delTextCol);
+                        using var sfDelBtn = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString("Del", fDelBtn, bDelBtn, rectDel, sfDelBtn);
+
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            };
+
+            // Cell click on Column 6 for Edit / Delete actions
+            _gridCustomers.CellMouseClick += async (s, e) =>
+            {
+                if (e.RowIndex < 0 || e.RowIndex >= _gridCustomers.Rows.Count) return;
+                if (e.ColumnIndex == 6)
+                {
+                    var row = _gridCustomers.Rows[e.RowIndex];
+                    if (row.Cells[0].Value == null) return;
+                    int id = Convert.ToInt32(row.Cells[0].Value);
+                    var customer = _allLoadedCustomers.FirstOrDefault(c => c.CustomerId == id);
+                    if (customer == null) return;
+
+                    var cellBounds = _gridCustomers.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false);
+                    int btnW = 58;
+                    int btnH = 26;
+                    int gapBtn = 6;
+                    int startX = (cellBounds.Width - (btnW * 2 + gapBtn)) / 2;
+                    int editEndX = startX + btnW;
+                    int delStartX = editEndX + gapBtn;
+                    int delEndX = delStartX + btnW;
+
+                    int btnY = (cellBounds.Height - btnH) / 2;
+                    if (e.Y >= btnY && e.Y <= btnY + btnH)
+                    {
+                        if (e.X >= startX && e.X <= editEndX)
+                        {
+                            ShowCustomerDialog(customer);
+                        }
+                        else if (e.X >= delStartX && e.X <= delEndX)
+                        {
+                            if (MessageBox.Show($"Are you sure you want to delete customer \"{customer.Name}\"?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                            {
+                                await _dbService.DeleteCustomerAsync(customer.CustomerId);
+                                await LoadCustomerData();
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Cursor styling for action buttons
+            _gridCustomers.CellMouseMove += (s, e) =>
+            {
+                if (e.RowIndex >= 0 && e.ColumnIndex == 6)
+                {
+                    _gridCustomers.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    _gridCustomers.Cursor = Cursors.Default;
+                }
+            };
+
+            // Attach Custom DarkScrollBar
+            _customersGridWrapper.Controls.Add(_gridCustomers);
+
+            _customerScrollBar = new DarkScrollBar
+            {
+                Location = new Point(_customersGridWrapper.Width - 9, 1),
+                Size = new Size(8, _customersGridWrapper.Height - 2),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right,
+                Visible = false
+            };
+            _customerScrollBar.AttachToGrid(_gridCustomers);
+            _customersGridWrapper.Controls.Add(_customerScrollBar);
+            _customerScrollBar.BringToFront();
+
+            // Wire Search and Filter events
+            _txtSearchCustomer.TextChanged += (s, e) => FilterCustomers();
+
+            _cmbCustomerCountry.SelectedIndexChanged += (s, e) => FilterCustomers();
+
+            // Double-click row to edit
             _gridCustomers.CellDoubleClick += (s, e) =>
             {
                 if (e.RowIndex < 0 || e.RowIndex >= _gridCustomers.Rows.Count) return;
                 var row = _gridCustomers.Rows[e.RowIndex];
                 if (row.Cells[0].Value == null) return;
-
-                var cust = new Customer(
-                    Convert.ToInt32(row.Cells[0].Value),
-                    row.Cells[1].Value?.ToString() ?? "",
-                    row.Cells[2].Value?.ToString() ?? "",
-                    row.Cells[3].Value?.ToString() ?? "",
-                    "",
-                    row.Cells[4].Value?.ToString() ?? "",
-                    row.Cells[5].Value?.ToString() ?? ""
-                );
-                ShowCustomerDialog(cust);
+                int id = Convert.ToInt32(row.Cells[0].Value);
+                var customer = _allLoadedCustomers.FirstOrDefault(c => c.CustomerId == id);
+                if (customer != null) ShowCustomerDialog(customer);
             };
 
+            // Right-click context menu
             _gridCustomers.MouseDown += (s, e) =>
             {
                 if (e.Button == MouseButtons.Right)
@@ -5205,42 +5997,24 @@ namespace PROJECT_SBV1.Forms
                         _gridCustomers.ClearSelection();
                         _gridCustomers.Rows[hit.RowIndex].Selected = true;
 
+                        var row = _gridCustomers.Rows[hit.RowIndex];
+                        if (row.Cells[0].Value == null) return;
+                        int id = Convert.ToInt32(row.Cells[0].Value);
+                        var customer = _allLoadedCustomers.FirstOrDefault(c => c.CustomerId == id);
+                        if (customer == null) return;
+
                         var ctx = new ContextMenuStrip();
-                        ctx.Items.Add("✏️ Edit", null, (_, _) =>
+                        ctx.Items.Add("✏️ Edit Customer", null, (_, _) => ShowCustomerDialog(customer));
+                        ctx.Items.Add("📑 View Invoices & History", null, (_, _) =>
                         {
-                            var row = _gridCustomers.Rows[hit.RowIndex];
-                            if (row.Cells[0].Value == null) return;
-                            var cust = new Customer(
-                                Convert.ToInt32(row.Cells[0].Value),
-                                row.Cells[1].Value?.ToString() ?? "",
-                                row.Cells[2].Value?.ToString() ?? "",
-                                row.Cells[3].Value?.ToString() ?? "",
-                                "",
-                                row.Cells[4].Value?.ToString() ?? "",
-                                row.Cells[5].Value?.ToString() ?? ""
-                            );
-                            ShowCustomerDialog(cust);
-                        });
-                        ctx.Items.Add("📑 View Invoices & History", null, async (_, _) =>
-                        {
-                            var row = _gridCustomers.Rows[hit.RowIndex];
-                            if (row.Cells[0].Value == null) return;
-                            int id = Convert.ToInt32(row.Cells[0].Value);
-                            var customers = await _billingService.GetAllCustomersAsync();
-                            var cust = customers.FirstOrDefault(c => c.CustomerId == id)
-                                ?? new Customer(id, row.Cells[1].Value?.ToString() ?? "", row.Cells[2].Value?.ToString() ?? "", row.Cells[3].Value?.ToString() ?? "", "", row.Cells[4].Value?.ToString() ?? "", row.Cells[5].Value?.ToString() ?? "");
-                            using var histDlg = new CustomerHistoryDialog(cust);
+                            using var histDlg = new CustomerHistoryDialog(customer);
                             histDlg.ShowDialog(this);
                         });
-                        ctx.Items.Add("🗑️ Delete", null, async (_, _) =>
+                        ctx.Items.Add("🗑️ Delete Customer", null, async (_, _) =>
                         {
-                            var row = _gridCustomers.Rows[hit.RowIndex];
-                            if (row.Cells[0].Value == null) return;
-                            int id = Convert.ToInt32(row.Cells[0].Value);
-                            string name = row.Cells[1].Value?.ToString() ?? "";
-                            if (MessageBox.Show($"Delete customer \"{name}\"?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                            if (MessageBox.Show($"Are you sure you want to delete customer \"{customer.Name}\"?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                             {
-                                await _dbService.DeleteCustomerAsync(id);
+                                await _dbService.DeleteCustomerAsync(customer.CustomerId);
                                 await LoadCustomerData();
                             }
                         });
@@ -5248,21 +6022,163 @@ namespace PROJECT_SBV1.Forms
                     }
                 }
             };
+
+            UpdateCustomersLayout();
+
+            // Load initial customer data
+            _ = LoadCustomerData();
         }
 
         private async Task LoadCustomerData()
         {
             var customers = await _dbService.GetCustomersAsync();
-            RefreshCustomerGrid(customers);
+            _allLoadedCustomers = customers;
+
+            // Populate country dropdown
+            if (_cmbCustomerCountry != null)
+            {
+                string curSelected = _cmbCustomerCountry.SelectedItem?.ToString() ?? "All Countries";
+                var countries = customers
+                    .Select(c => c.Country)
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToList();
+
+                _cmbCustomerCountry.Items.Clear();
+                _cmbCustomerCountry.Items.Add("All Countries");
+                foreach (var country in countries)
+                {
+                    _cmbCustomerCountry.Items.Add(country);
+                }
+                _cmbCustomerCountry.SelectedItem = countries.Contains(curSelected) ? curSelected : "All Countries";
+            }
+
+            // Update KPI cards
+            UpdateCustomerKPIs(customers);
+
+            // Filter & populate grid
+            FilterCustomers();
         }
 
-        private void RefreshCustomerGrid(List<Customer> customers)
+        private void UpdateCustomerKPIs(List<Customer> customers)
+        {
+            if (_lblValTotalCustomers == null || _lblValActiveCustomers == null || _lblValTotalCities == null || _lblValTotalCountries == null) return;
+
+            int total = customers.Count;
+            int active = total;
+            int cities = customers.Select(c => c.City).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().Count();
+            int countries = customers.Select(c => c.Country).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().Count();
+
+            _lblValTotalCustomers.Text = $"{total} Registered";
+            _lblValActiveCustomers.Text = $"{active} Active";
+            _lblValTotalCities.Text = $"{cities} Cities";
+            _lblValTotalCountries.Text = $"{countries} Countries";
+
+            if (_lblTrendTotalCustomers != null) _lblTrendTotalCustomers.Text = "Enterprise client base";
+            if (_lblTrendActiveCustomers != null) _lblTrendActiveCustomers.Text = "100% operational status";
+            if (_lblTrendTotalCities != null) _lblTrendTotalCities.Text = "Metropolitan coverage";
+            if (_lblTrendTotalCountries != null) _lblTrendTotalCountries.Text = "Global presence";
+        }
+
+        private void FilterCustomers()
+        {
+            if (_allLoadedCustomers == null) return;
+
+            string search = _txtSearchCustomer?.Text?.Trim().ToLowerInvariant() ?? "";
+            string country = _cmbCustomerCountry?.SelectedItem?.ToString() ?? "All Countries";
+
+            var filtered = _allLoadedCustomers.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                filtered = filtered.Where(c =>
+                    c.CustomerId.ToString().Contains(search) ||
+                    c.Name.ToLowerInvariant().Contains(search) ||
+                    c.Email.ToLowerInvariant().Contains(search) ||
+                    c.Phone.ToLowerInvariant().Contains(search) ||
+                    c.City.ToLowerInvariant().Contains(search) ||
+                    c.Country.ToLowerInvariant().Contains(search));
+            }
+
+            if (country != "All Countries" && !string.IsNullOrWhiteSpace(country))
+            {
+                filtered = filtered.Where(c => string.Equals(c.Country, country, StringComparison.OrdinalIgnoreCase));
+            }
+
+            _currentFilteredCustomers = filtered.ToList();
+
+            if (_lblCustomerTableTitle != null)
+            {
+                string suffix = (country != "All Countries" && !string.IsNullOrEmpty(country)) ? $" — {country}" : "";
+                _lblCustomerTableTitle.Text = $"👥  Customer Directory Register{suffix} ({_currentFilteredCustomers.Count})";
+            }
+
+            ApplyCustomerSorting();
+        }
+
+        private void ApplyCustomerSorting()
         {
             if (_gridCustomers == null) return;
-            _gridCustomers.Rows.Clear();
-            foreach (var c in customers)
+
+            IEnumerable<Customer> sorted = _customerSortColumn switch
             {
-                _gridCustomers.Rows.Add(c.CustomerId, c.Name, c.Email, c.Phone, c.City, c.Country);
+                "ID" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.CustomerId) : _currentFilteredCustomers.OrderByDescending(c => c.CustomerId),
+                "Name" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.Name) : _currentFilteredCustomers.OrderByDescending(c => c.Name),
+                "Email" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.Email) : _currentFilteredCustomers.OrderByDescending(c => c.Email),
+                "Phone" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.Phone) : _currentFilteredCustomers.OrderByDescending(c => c.Phone),
+                "City" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.City) : _currentFilteredCustomers.OrderByDescending(c => c.City),
+                "Country" => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.Country) : _currentFilteredCustomers.OrderByDescending(c => c.Country),
+                _ => _customerSortAscending ? _currentFilteredCustomers.OrderBy(c => c.CustomerId) : _currentFilteredCustomers.OrderByDescending(c => c.CustomerId)
+            };
+
+            _gridCustomers.Rows.Clear();
+            foreach (var c in sorted)
+            {
+                int rIdx = _gridCustomers.Rows.Add(c.CustomerId, c.Name, c.Email, c.Phone, c.City, c.Country, "");
+                if (rIdx >= 0 && rIdx < _gridCustomers.Rows.Count)
+                {
+                    _gridCustomers.Rows[rIdx].Cells[1].ToolTipText = $"Customer ID: #{c.CustomerId}\nName: {c.Name}\nCity: {c.City}, {c.Country}";
+                }
+            }
+
+            if (_customerScrollBar != null)
+            {
+                _customerScrollBar.SyncWithGrid();
+            }
+        }
+
+        private void SelectCustomerFilter(int index)
+        {
+            _selectedCustomerCardIndex = index;
+            UpdateCustomerCardHighlight(index);
+
+            if (index == 0)
+            {
+                if (_cmbCustomerCountry != null) _cmbCustomerCountry.SelectedIndex = 0;
+                if (_txtSearchCustomer != null) _txtSearchCustomer.Text = "";
+            }
+            FilterCustomers();
+        }
+
+        private void UpdateCustomerCardHighlight(int activeIndex)
+        {
+            for (int i = 0; i < _customerMetricCards.Count; i++)
+            {
+                var card = _customerMetricCards[i];
+                if (card == null) continue;
+
+                if (i == activeIndex)
+                {
+                    card.CustomBorderColor = ThemeManager.AccentBlue;
+                    card.BorderWidth = 2;
+                }
+                else
+                {
+                    card.CustomBorderColor = ThemeManager.CardBorder;
+                    card.BorderWidth = 1;
+                }
+                card.Invalidate();
             }
         }
 
@@ -5271,8 +6187,8 @@ namespace PROJECT_SBV1.Forms
             bool isEdit = existing != null;
             var dlg = new Form
             {
-                Text = isEdit ? "Edit Customer" : "Add Customer",
-                Size = new Size(450, 450),
+                Text = isEdit ? "Edit Customer — S TOM'S" : "Add Customer — S TOM'S",
+                Size = new Size(465, 490),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -5280,31 +6196,32 @@ namespace PROJECT_SBV1.Forms
                 BackColor = ThemeManager.Background
             };
 
-            int y = 20;
-            var lblName = CreateDialogLabel("Customer Name:", y, dlg);
-            var txtName = CreateDialogTextBox(existing?.Name ?? "", y + 22, dlg); y += 60;
+            int y = 16;
+            var lblName = CreateDialogLabel("Customer Name *:", y, dlg);
+            var txtName = CreateDialogTextBox(existing?.Name ?? "", y + 20, dlg); y += 58;
 
-            var lblEmail = CreateDialogLabel("Email:", y, dlg);
-            var txtEmail = CreateDialogTextBox(existing?.Email ?? "", y + 22, dlg); y += 60;
+            var lblEmail = CreateDialogLabel("Email Address *:", y, dlg);
+            var txtEmail = CreateDialogTextBox(existing?.Email ?? "", y + 20, dlg); y += 58;
 
-            var lblPhone = CreateDialogLabel("Phone:", y, dlg);
-            var txtPhone = CreateDialogTextBox(existing?.Phone ?? "", y + 22, dlg); y += 60;
+            var lblPhone = CreateDialogLabel("Phone Number:", y, dlg);
+            var txtPhone = CreateDialogTextBox(existing?.Phone ?? "", y + 20, dlg); y += 58;
 
             var lblCity = CreateDialogLabel("City:", y, dlg);
-            var txtCity = CreateDialogTextBox(existing?.City ?? "", y + 22, dlg); y += 60;
+            var txtCity = CreateDialogTextBox(existing?.City ?? "", y + 20, dlg); y += 58;
 
             var lblCountry = CreateDialogLabel("Country:", y, dlg);
-            var txtCountry = CreateDialogTextBox(existing?.Country ?? "", y + 22, dlg); y += 65;
+            var txtCountry = CreateDialogTextBox(existing?.Country ?? "USA", y + 20, dlg); y += 65;
 
             var btnSave = new ModernButton
             {
-                Text = isEdit ? "💾 Update" : "✅ Add Customer",
+                Text = isEdit ? "💾 Update Customer" : "✅ Add Customer",
                 NormalColor = ThemeManager.AccentBlue,
                 HoverColor = Color.FromArgb(100, 130, 255),
                 Size = new Size(180, 38),
                 Location = new Point(25, y),
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                BorderRadius = 10
+                BorderRadius = 10,
+                ForeColor = Color.White
             };
             dlg.Controls.Add(btnSave);
 
@@ -5316,7 +6233,8 @@ namespace PROJECT_SBV1.Forms
                 Size = new Size(120, 38),
                 Location = new Point(220, y),
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                BorderRadius = 10
+                BorderRadius = 10,
+                ForeColor = Color.White
             };
             dlg.Controls.Add(btnCancel);
             btnCancel.Click += (s, e) => dlg.Close();
@@ -5331,7 +6249,7 @@ namespace PROJECT_SBV1.Forms
 
                 if (string.IsNullOrWhiteSpace(txtEmail.Text))
                 {
-                    MessageBox.Show("Email is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Email address is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -5340,7 +6258,7 @@ namespace PROJECT_SBV1.Forms
                     txtName.Text.Trim(),
                     txtEmail.Text.Trim(),
                     txtPhone.Text.Trim(),
-                    "",
+                    existing?.Address ?? "",
                     txtCity.Text.Trim(),
                     txtCountry.Text.Trim()
                 );
@@ -5396,7 +6314,7 @@ namespace PROJECT_SBV1.Forms
             _settingsThemeCard.Controls.Add(lblThemeDesc);
             _themeSubLabels.Add(lblThemeDesc);
 
-            var lblCurrentTheme = new Label
+            _lblSettingsCurrentTheme = new Label
             {
                 Text = $"Current Theme:  {ThemeManager.CurrentTheme}",
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
@@ -5404,7 +6322,7 @@ namespace PROJECT_SBV1.Forms
                 Location = new Point(18, 85),
                 AutoSize = true
             };
-            _settingsThemeCard.Controls.Add(lblCurrentTheme);
+            _settingsThemeCard.Controls.Add(_lblSettingsCurrentTheme);
 
             var themeToggleLarge = new ThemeToggle
             {
@@ -5415,10 +6333,115 @@ namespace PROJECT_SBV1.Forms
 
             _contentPanel.Controls.Add(_settingsThemeCard);
 
+            // 2. Company Details & Invoice PDF Branding Section
+            _settingsCompanyCard = new RoundedPanel
+            {
+                Location = new Point(0, 165),
+                Size = new Size(1060, 230),
+                BorderRadius = 14,
+                BorderWidth = 1
+            };
+            _themeCards.Add(_settingsCompanyCard);
+
+            var lblCompTitle = new Label
+            {
+                Text = "🏢  Company Details & Invoice PDF Branding",
+                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                ForeColor = ThemeManager.TextPrimary,
+                Location = new Point(18, 18),
+                AutoSize = true
+            };
+            _settingsCompanyCard.Controls.Add(lblCompTitle);
+            _themeTitleLabels.Add(lblCompTitle);
+
+            var lblCompDesc = new Label
+            {
+                Text = "Manage company name, address, GSTIN, and bank/payment instructions printed on all invoices & PDF exports.",
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = ThemeManager.TextSecondary,
+                Location = new Point(18, 50),
+                AutoSize = true
+            };
+            _settingsCompanyCard.Controls.Add(lblCompDesc);
+            _themeSubLabels.Add(lblCompDesc);
+
+            var btnEditComp = new ModernButton
+            {
+                Text = "✏️ Edit Company Details",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Size = new Size(190, 36),
+                Location = new Point(690, 16),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BorderRadius = 8,
+                NormalColor = Color.FromArgb(79, 70, 229),
+                HoverColor = Color.FromArgb(99, 102, 241),
+                ForeColor = Color.White
+            };
+            _settingsCompanyCard.Controls.Add(btnEditComp);
+
+            var btnPreviewSample = new ModernButton
+            {
+                Text = "👁️ Preview Sample PDF",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Size = new Size(160, 36),
+                Location = new Point(890, 16),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BorderRadius = 8,
+                NormalColor = Color.FromArgb(16, 185, 129),
+                HoverColor = Color.FromArgb(52, 211, 153),
+                ForeColor = Color.White
+            };
+            _settingsCompanyCard.Controls.Add(btnPreviewSample);
+
+            _settingsCompanyPreviewPanel = new RoundedPanel
+            {
+                Location = new Point(18, 80),
+                Size = new Size(1024, 135),
+                BorderRadius = 10,
+                BorderWidth = 1,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            _settingsCompanyCard.Controls.Add(_settingsCompanyPreviewPanel);
+
+            btnEditComp.Click += async (s, e) =>
+            {
+                using var designer = new InvoiceDesignerForm();
+                if (designer.ShowDialog(this) == DialogResult.OK)
+                {
+                    await RefreshCompanySettingsPreviewAsync(_settingsCompanyPreviewPanel);
+                }
+            };
+
+            btnPreviewSample.Click += async (s, e) =>
+            {
+                var profile = await _billingService.GetBusinessProfileAsync();
+                var sampleInv = _currentBillingInvoices.FirstOrDefault() 
+                    ?? (await _billingService.GetInvoicesAsync(limit: 1)).FirstOrDefault()
+                    ?? new Invoice
+                    {
+                        InvoiceNumber = "SAMPLE-INV-001",
+                        CustomerName = "Sample Customer Ltd",
+                        InvoiceDate = DateTime.Today,
+                        DueDate = DateTime.Today.AddDays(15),
+                        Status = "Paid"
+                    };
+                if (sampleInv.Items.Count == 0)
+                {
+                    sampleInv.Items.Add(new InvoiceItem("Software Subscription", "Cloud Enterprise License", 1m, 25000m, 0m, 18m));
+                    sampleInv.RecalculateTotals();
+                }
+                string path = _pdfService.GenerateInvoicePdf(sampleInv, profile);
+                _pdfService.OpenPdf(path);
+            };
+
+            _ = RefreshCompanySettingsPreviewAsync(_settingsCompanyPreviewPanel);
+
+            _contentPanel.Controls.Add(_settingsCompanyCard);
+
             // Application Info Section
             _settingsInfoCard = new RoundedPanel
             {
-                Location = new Point(0, 170),
+                Location = new Point(0, 410),
                 Size = new Size(1060, 200),
                 BorderRadius = 14,
                 BorderWidth = 1
@@ -5478,7 +6501,7 @@ namespace PROJECT_SBV1.Forms
             // User Session Card
             _settingsSessionCard = new RoundedPanel
             {
-                Location = new Point(0, 390),
+                Location = new Point(0, 625),
                 Size = new Size(1060, 130),
                 BorderRadius = 14,
                 BorderWidth = 1
@@ -5940,22 +6963,64 @@ namespace PROJECT_SBV1.Forms
             int contentWidth = Math.Max(1050, _contentPanel.ClientSize.Width - 50);
             int contentHeight = _contentPanel.ClientSize.Height;
 
-            if (_customersHeaderCard != null)
+            // 1. Metric cards (4 cards)
+            int cardHeight = 110;
+            int gap = 10;
+            if (_customerMetricCards.Count == 4)
             {
-                _customersHeaderCard.Location = new Point(0, 0);
-                _customersHeaderCard.Size = new Size(contentWidth, 70);
-                if (_btnCustomerRefresh != null) _btnCustomerRefresh.Location = new Point(contentWidth - 118, 17);
-                if (_btnCustomerAdd != null) _btnCustomerAdd.Location = new Point(contentWidth - 285, 17);
+                int totalGaps = gap * 3;
+                int baseWidth = (contentWidth - totalGaps) / 4;
+                int remainder = (contentWidth - totalGaps) % 4;
+                int currentX = 0;
+                for (int i = 0; i < 4; i++)
+                {
+                    int w = baseWidth + (i < remainder ? 1 : 0);
+                    _customerMetricCards[i].Location = new Point(currentX, 0);
+                    _customerMetricCards[i].Size = new Size(w, cardHeight);
+                    currentX += w + gap;
+                }
             }
 
-            int tableHeight = Math.Max(480, contentHeight - 85 - 30);
-            _customersTableCard.Location = new Point(0, 85);
+            // 2. Toolbar Card
+            int toolbarY = cardHeight + 14;
+            if (_customersToolbarCard != null)
+            {
+                _customersToolbarCard.Location = new Point(0, toolbarY);
+                _customersToolbarCard.Size = new Size(contentWidth, 68);
+
+                if (_btnCustomerRefresh != null) _btnCustomerRefresh.Location = new Point(contentWidth - 100, 17);
+                if (_btnCustomerAdd != null) _btnCustomerAdd.Location = new Point(contentWidth - 250, 17);
+            }
+
+            // 3. Customers Table Card & Wrapper
+            int tableY = toolbarY + 68 + 14;
+            int tableHeight = Math.Max(420, contentHeight - tableY - 20);
+
+            _customersTableCard.Location = new Point(0, tableY);
             _customersTableCard.Size = new Size(contentWidth, tableHeight);
 
-            if (_gridCustomers != null)
+            if (_lblCustomerHint != null)
             {
-                _gridCustomers.Location = new Point(18, 18);
-                _gridCustomers.Size = new Size(contentWidth - 36, tableHeight - 36);
+                _lblCustomerHint.Location = new Point(Math.Max(280, contentWidth - 460), 16);
+            }
+
+            if (_customersGridWrapper != null)
+            {
+                _customersGridWrapper.Location = new Point(16, 44);
+                _customersGridWrapper.Size = new Size(contentWidth - 32, tableHeight - 60);
+
+                if (_gridCustomers != null)
+                {
+                    _gridCustomers.Location = new Point(1, 1);
+                    _gridCustomers.Size = new Size(_customersGridWrapper.Width - 11, _customersGridWrapper.Height - 2);
+                }
+
+                if (_customerScrollBar != null)
+                {
+                    _customerScrollBar.Location = new Point(_customersGridWrapper.Width - 9, 1);
+                    _customerScrollBar.Size = new Size(8, _customersGridWrapper.Height - 2);
+                    _customerScrollBar.SyncWithGrid();
+                }
             }
         }
 
@@ -5993,17 +7058,164 @@ namespace PROJECT_SBV1.Forms
             _settingsThemeCard.Location = new Point(0, 0);
             _settingsThemeCard.Size = new Size(contentWidth, 150);
 
+            if (_settingsCompanyCard != null)
+            {
+                _settingsCompanyCard.Location = new Point(0, 165);
+                _settingsCompanyCard.Size = new Size(contentWidth, 230);
+            }
+
             if (_settingsInfoCard != null)
             {
-                _settingsInfoCard.Location = new Point(0, 170);
+                _settingsInfoCard.Location = new Point(0, 410);
                 _settingsInfoCard.Size = new Size(contentWidth, 200);
             }
 
             if (_settingsSessionCard != null)
             {
-                _settingsSessionCard.Location = new Point(0, 390);
+                _settingsSessionCard.Location = new Point(0, 625);
                 _settingsSessionCard.Size = new Size(contentWidth, 130);
             }
+        }
+
+        private async Task RefreshCompanySettingsPreviewAsync(Panel previewPnl)
+        {
+            if (previewPnl == null) return;
+            var profile = await _billingService.GetBusinessProfileAsync();
+            previewPnl.Controls.Clear();
+
+            bool isDark = ThemeManager.CurrentTheme == AppTheme.Dark;
+            Color panelBg = isDark ? Color.FromArgb(20, 23, 34) : Color.FromArgb(248, 250, 252);
+            Color panelBorder = isDark ? Color.FromArgb(42, 45, 65) : Color.FromArgb(226, 232, 240);
+
+            if (previewPnl is RoundedPanel rp)
+            {
+                rp.CustomBackgroundColor = panelBg;
+                rp.CustomBorderColor = panelBorder;
+                rp.Invalidate();
+            }
+
+            // High-contrast colors guaranteed for Light Mode & Dark Mode
+            Color titleCol = isDark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42); // Crisp dark text in light mode
+            Color textDark = isDark ? Color.FromArgb(226, 232, 240) : Color.FromArgb(30, 41, 59); // Dark slate in light mode
+            Color textMuted = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(71, 85, 105); // Header slate in light mode
+            Color textSubtle = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139); // Address gray
+            Color accentCol = isDark ? Color.FromArgb(96, 165, 250) : Color.FromArgb(79, 70, 229); // Vibrant indigo in light mode
+            Color gstinCol = isDark ? Color.FromArgb(52, 211, 153) : Color.FromArgb(5, 150, 105); // Rich green
+
+            // Left Column: Business Name, Tagline & GSTIN
+            var lblName = new Label
+            {
+                Text = profile.BusinessName,
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                ForeColor = titleCol,
+                Location = new Point(16, 14),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblName);
+
+            var lblTag = new Label
+            {
+                Text = profile.Tagline,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
+                ForeColor = accentCol,
+                Location = new Point(16, 40),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblTag);
+
+            var lblGstin = new Label
+            {
+                Text = $"GSTIN: {profile.GSTIN}",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = gstinCol,
+                Location = new Point(16, 68),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblGstin);
+
+            var lblAddress = new Label
+            {
+                Text = $"📍 {profile.Address}, {profile.City}, {profile.Country}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = textSubtle,
+                Location = new Point(16, 94),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblAddress);
+
+            // Middle Column: Contact Info
+            int midX = Math.Max(380, previewPnl.Width / 3 + 20);
+            var lblContactHeader = new Label
+            {
+                Text = "CONTACT INFORMATION",
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                ForeColor = textMuted,
+                Location = new Point(midX, 16),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblContactHeader);
+
+            var lblPhone = new Label
+            {
+                Text = $"📞 {profile.Phone}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = textDark,
+                Location = new Point(midX, 38),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblPhone);
+
+            var lblEmail = new Label
+            {
+                Text = $"✉️ {profile.Email}",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = textDark,
+                Location = new Point(midX, 64),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblEmail);
+
+            // Right Column: Bank & UPI Info
+            int rightX = Math.Max(700, (previewPnl.Width * 2) / 3);
+            var lblBankHeader = new Label
+            {
+                Text = "BANK & PAYMENT DETAILS",
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                ForeColor = textMuted,
+                Location = new Point(rightX, 16),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblBankHeader);
+
+            var lblBank = new Label
+            {
+                Text = $"🏦 {profile.BankName} (A/C: {profile.AccountNumber})",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = textDark,
+                Location = new Point(rightX, 38),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblBank);
+
+            var lblIfsc = new Label
+            {
+                Text = $"IFSC: {profile.IFSC}",
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = textDark,
+                Location = new Point(rightX, 64),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblIfsc);
+
+            var lblUpi = new Label
+            {
+                Text = $"UPI: {profile.UPIId}",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = accentCol,
+                Location = new Point(rightX, 90),
+                AutoSize = true
+            };
+            previewPnl.Controls.Add(lblUpi);
         }
 
         private DataGridView CreateStyledGrid()

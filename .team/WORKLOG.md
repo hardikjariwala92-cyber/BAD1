@@ -4,6 +4,102 @@ This log records daily development sessions, code changes, verification test res
 
 ---
 
+## Session: 2026-10-25 — Single-Screen Live Invoice PDF Designer Upgrade (InvoiceDesignerForm)
+
+- **Developer**: Hardik (Full-Stack UI/UX & Engine Developer)
+- **Branch**: `feature/sales-billing`
+- **Assigned Task**: `TASK-SPRINT-001` (UI Presentation) & `TASK-SPRINT-002` (Engine Services)
+- **Objective**: Replace the popup-based Business Profile & Invoice Branding editor with a dedicated, single-screen **Invoice PDF Designer** (`InvoiceDesignerForm`). The screen features:
+  - **Top Action Toolbar**: Back to Settings (with unsaved changes check), Reset Changes (with confirmation prompt), Preview / Refresh PDF, Export PDF (SaveFileDialog + external launch), and Save Changes (validation + SQLite persistence).
+  - **Left Panel (Editor Controls)**: Compact, collapsible cards for:
+    1. *Business Information*: Business Name, Tagline, Address, City/State, Country, Phone, Email, GSTIN.
+    2. *Bank Payment Details*: Bank Name, Branch Name, Account Number, IFSC Code, UPI ID.
+    3. *Invoice Branding*: Logo file selection (Browse/Clear/Thumbnail), Accent Color Picker (preset swatches + Windows ColorDialog), Footer Note, and Default Terms.
+  - **Right Panel (Live Invoice PDF Preview)**:
+    - High-fidelity GDI+ vector renderer matching PDFsharp invoice output 1:1 in real-time.
+    - 250ms debounce timer for responsive, smooth updates as fields change.
+    - Full zoom controls: `Fit to Page`, `Zoom -`, Zoom percentage indicator, `Zoom +`.
+    - Invoice selector dropdown to switch between sample invoice and real database invoices.
+    - Double-buffered canvas with realistic drop shadow and centered A4 paper.
+  - **Navigation Integration**:
+    - Replaced all popup `BusinessProfileDialog` calls in `DashboardForm.cs` and `InvoiceForm.cs` with the dedicated `InvoiceDesignerForm`.
+  - **Layout Mixing & Address Field Fix**:
+    - Fixed card height calculation in `CreateCollapsibleCard` where `bodyPanel.Dock = DockStyle.Fill` caused height truncation to 110px and overlapped cards.
+    - Expanded `_txtAddress` to a multi-line, 44px high field with full visibility and editing capabilities.
+    - Preserved top-to-bottom card order with `_editorCards` list in `ReflowLeftCards`.
+    - Brought `_previewTopBar` to front so it is never covered by the canvas container.
+    - Aligned table columns with designated widths, text clipping, and right-aligned numbers for Qty, Rate, Disc%, Tax%, and Total across both GDI+ and PDFsharp renderers.
+    - Prevented seller address and contact strings from overlapping the right Invoice Info metadata box.
+- **Files Modified / Created**:
+  - [`src/Forms/InvoiceDesignerForm.cs`](file:///d:/sofwere/src/Forms/InvoiceDesignerForm.cs) — Fixed card sizing, card collapse/expand reflow, address multi-line editing, and preview top bar z-order.
+  - [`src/Services/InvoicePdfService.cs`](file:///d:/sofwere/src/Services/InvoicePdfService.cs) — Fixed column width overlap, right-aligned monetary values, added text trimming, and cleaned up address lines in both GDI+ and PDFsharp renderers.
+  - [`src/Models/BusinessProfile.cs`](file:///d:/sofwere/src/Models/BusinessProfile.cs) — Added `BranchName`, `LogoPath`, `AccentColorHex`, `FooterNote`, and deep `Clone()`.
+  - [`src/Services/BillingDataService.cs`](file:///d:/sofwere/src/Services/BillingDataService.cs) — Updated SQLite persistence to read/write `BranchName`, `LogoPath`, `AccentColorHex`, and `FooterNote`.
+  - [`src/Forms/DashboardForm.cs`](file:///d:/sofwere/src/Forms/DashboardForm.cs) — Replaced popup dialogs with `InvoiceDesignerForm` in Settings and Invoices grid context menu.
+  - [`src/Forms/InvoiceForm.cs`](file:///d:/sofwere/src/Forms/InvoiceForm.cs) — Replaced popup dialog with `InvoiceDesignerForm`.
+  - [`tests/PROJECT-SBV1.Tests/InvoiceDesignerTests.cs`](file:///d:/sofwere/tests/PROJECT-SBV1.Tests/InvoiceDesignerTests.cs) — Added 5 automated tests for branding profile, persistence, GDI+ preview bitmap rendering, PDF generation, and designer form initialization.
+  - [`docs/TEST_REPORT.md`](file:///d:/sofwere/docs/TEST_REPORT.md) — Logged test execution run `TR-20261025-004` (101/101 tests passed, 100% pass rate).
+- **Verification & Test Status**:
+  - `dotnet build`: Succeeded (0 warnings, 0 errors).
+  - `dotnet test`: 101/101 tests passed (100% pass rate).
+- **Next Actions**: Deliver solution to Hardik and demonstrate the new single-screen Live PDF Designer with clean address editing and non-overlapping layout.
+
+---
+
+## Session: 2026-10-25 — Settings Page Company Details & Invoice PDF Branding Integration
+
+- **Developer**: Hardik (Full-Stack UI/UX & Engine Developer)
+- **Branch**: `feature/sales-billing`
+- **Assigned Task**: `TASK-SPRINT-001` (UI Presentation) & `TASK-SPRINT-002` (Engine Services)
+- **Objective**: Add a dedicated "🏢 Company Details & Invoice PDF Branding" section in Settings page with `[ ✏️ Edit Company Details ]` and `[ 👁️ Preview Sample PDF ]` buttons, add `[ 🏢 Company Info ]` button to `InvoiceForm.cs` header toolbar and context menu, ensure all PDF generation dynamically fetches the latest business profile, and add automated test coverage.
+- **Files Modified / Created**:
+  - [`src/Forms/DashboardForm.cs`](file:///d:/sofwere/src/Forms/DashboardForm.cs) — Added `_settingsCompanyCard` with live company info preview, `[ ✏️ Edit Company Details ]` button opening `BusinessProfileDialog`, `[ 👁️ Preview Sample PDF ]` button, `RefreshCompanySettingsPreviewAsync()` live refresh, responsive layout in `UpdateSettingsLayout()`, and `🏢 Update Company & Invoice Details` in `_gridInvoices` right-click context menu.
+  - [`src/Forms/InvoiceForm.cs`](file:///d:/sofwere/src/Forms/InvoiceForm.cs) — Added `_btnCompanyDetails` in the header toolbar right next to `👁️ Preview PDF`, dynamically re-fetching `_profile = await _billingService.GetBusinessProfileAsync();` in `PreviewPdfWorkflowAsync()` and `ExportPdfWorkflowAsync()`.
+  - [`src/Forms/BusinessProfileDialog.cs`](file:///d:/sofwere/src/Forms/BusinessProfileDialog.cs) — Added `_txtCountry` field support and set `DialogResult = DialogResult.OK;` on save.
+  - [`tests/PROJECT-SBV1.Tests/SalesAndBillingTests.cs`](file:///d:/sofwere/tests/PROJECT-SBV1.Tests/SalesAndBillingTests.cs) — Added `TestScenario8_BusinessProfile_UpdateAndPdfBranding_Workflow` verifying persistence and clean PDF generation with updated company profile.
+  - [`docs/TEST_REPORT.md`](file:///d:/sofwere/docs/TEST_REPORT.md) — Logged test execution run `TR-20261025-003` (96/96 tests passed, 100% pass rate).
+- **Verification & Test Status**:
+  - `dotnet build`: Succeeded (0 warnings, 0 errors).
+  - `dotnet test`: 96/96 tests passed (100% pass rate).
+- **Next Actions**: Deliver solution to Hardik and demonstrate live update flow.
+
+---
+
+## Session: 2026-10-25 — Sales Register Inline Edit & Delete Actions Integration
+
+- **Developer**: Hardik (Full-Stack UI/UX & Engine Developer)
+- **Branch**: `feature/sales-billing`
+- **Assigned Task**: `TASK-SPRINT-001` (UI Presentation) & `TASK-SPRINT-002` (Engine Services)
+- **Objective**: Add dedicated inline `Edit` and `Del` Bootstrap action buttons to the Sales Register / Invoices table in `DashboardForm.cs`, wire mouse click handlers for edit modal and deletion confirmation, add cascading deletion in `BillingDataService.cs`, add `Delete Invoice` to right-click context menu, and add automated test coverage.
+- **Files Modified / Created**:
+  - [`src/Services/BillingDataService.cs`](file:///d:/sofwere/src/Services/BillingDataService.cs) — Added `DeleteInvoiceAsync(int invoiceId)` which executes transactional cascading deletion across `InvoiceItems`, `Payments`, and `Invoices`.
+  - [`src/Forms/DashboardForm.cs`](file:///d:/sofwere/src/Forms/DashboardForm.cs) — Added `Actions` column (Width = 135, center aligned), custom cell painting for rounded `Edit` (Bootstrap primary/info pill) and `Del` (Bootstrap danger pill) buttons, wired `CellMouseClick` to open `InvoiceForm` in edit mode on `Edit` click and confirm + delete on `Del` click, added `CellMouseMove` hand cursor feedback, and added `🗑️ Delete Invoice` to the right-click context menu.
+  - [`tests/PROJECT-SBV1.Tests/SalesAndBillingTests.cs`](file:///d:/sofwere/tests/PROJECT-SBV1.Tests/SalesAndBillingTests.cs) — Added `TestScenario7_DatabasePersistence_DeleteInvoiceAsync_Workflow` verifying transactional deletion of invoices and cascade removal.
+  - [`docs/TEST_REPORT.md`](file:///d:/sofwere/docs/TEST_REPORT.md) — Logged test execution run `TR-20261025-002` (95/95 tests passed, 100% pass rate).
+- **Verification & Test Status**:
+  - `dotnet build`: Succeeded (0 warnings, 0 errors).
+  - `dotnet test`: 95/95 tests passed (100% pass rate).
+- **Next Actions**: Deliver completed feature to Hardik and demonstrate the new inline actions.
+
+---
+
+## Session: 2026-10-25 — Customer Management Page CSS, Bootstrap 5 & Rounded Table Upgrade
+
+- **Developer**: Hardik (Full-Stack UI/UX & Engine Developer)
+- **Branch**: `feature/sales-billing`
+- **Assigned Task**: `TASK-SPRINT-001` (UI Presentation) & `TASK-SPRINT-002` (Engine Services)
+- **Objective**: Modernize the Customer Management screen with modern CSS & Bootstrap 5 design aesthetics, round the table corners with a dedicated `RoundedPanel` wrapper, add 4 live interactive KPI metric cards, integrate `RoundedSearchBox` and `RoundedComboBox` for real-time search & country filtering, add dedicated inline Bootstrap action buttons (`Edit` & `Del`) with hover styling and click handlers, and ensure full working condition.
+- **Files Modified / Created**:
+  - [`src/Forms/DashboardForm.cs`](file:///d:/sofwere/src/Forms/DashboardForm.cs) — Rebuilt Customers Page with 4 KPI cards, Bootstrap 5 toolbar card, `RoundedSearchBox`, `RoundedComboBox`, rounded table wrapper (`_customersGridWrapper`), custom cell painting with `table-striped`, `table-hover`, neon cyan accent bar, ID pill tag, initial avatar circle with dynamic gradient, country badge pill with glowing dot indicator, inline `Edit` and `Del` buttons with interactive click handlers, instant real-time multi-column search, column header sorting, and responsive layout calculation.
+  - [`tests/PROJECT-SBV1.Tests/CustomerManagementTests.cs`](file:///d:/sofwere/tests/PROJECT-SBV1.Tests/CustomerManagementTests.cs) — Added 6 comprehensive automated unit and UI tests covering customer properties, KPI metrics, search & country filtering, sorting, CRUD workflow in `DatabaseService`, and UI layout controls.
+  - [`docs/TEST_REPORT.md`](file:///d:/sofwere/docs/TEST_REPORT.md) — Logged test execution run `TR-20261025-001` (94/94 tests passed, 100% pass rate).
+- **Verification & Test Status**:
+  - `dotnet build`: Succeeded (0 warnings, 0 errors).
+  - `dotnet test`: 94/94 tests passed (100% pass rate).
+- **Next Actions**: Present solution to Hardik and review the new rounded Bootstrap 5 design.
+
+---
+
 ## Session: 2026-10-20 — Product Inventory Barcode Scanner & Lookup Integration
 
 - **Developer**: Hardik (Full-Stack UI/UX & Engine Developer)
@@ -831,6 +927,43 @@ This log records daily development sessions, code changes, verification test res
 - **Next Steps**:
   - Run the application (`dotnet run`) to test manual entry and barcode scanning.
   - Push branch to GitHub origin (`git push origin feature/sales-billing`).
+
+---
+
+## Session: 2026-10-25 — Settings Company Details Light Mode Readability Fix & Live Theme Sync
+
+- **Developer**: Hardik
+- **Role**: UI/UX Developer & Engine Developer (Full-Stack)
+- **Branch**: `feature/sales-billing`
+- **Assigned Task**: `TASK-SPRINT-001` (UI Presentation) & `TASK-SPRINT-002` (Engine Services)
+- **Objective**: Fix the washed-out / invisible text bug in Settings -> "Company Details & Invoice PDF Branding" preview card under Light Mode, and ensure seamless real-time theme updates when toggling between Light and Dark mode.
+- **Root Cause**:
+  - `RefreshCompanySettingsPreviewAsync(Panel previewPnl)` in `DashboardForm.cs` had hardcoded white/light-gray text colors designed exclusively for Dark Mode.
+  - Under Light Mode, the card background shifted to white (`#FFFFFF`) while the text remained white (`#F1F5F9`) and light slate (`#94A3B8`), rendering the company details completely unreadable.
+  - The preview panel was not re-rendered dynamically during theme toggle events in `ApplyThemeColors()`, and `lblCurrentTheme` did not update its label text.
+- **Changes Implemented**:
+  - [`src/Forms/DashboardForm.cs`](file:///d:/sofwere/src/Forms/DashboardForm.cs):
+    - Added form-level tracking fields `_settingsCompanyPreviewPanel` (`RoundedPanel?`) and `_lblSettingsCurrentTheme` (`Label?`).
+    - Handled proper reference cleanup in `ClearActivePageControls()`.
+    - Integrated `RefreshCompanySettingsPreviewAsync(_settingsCompanyPreviewPanel)` and `_lblSettingsCurrentTheme.Text = $"Current Theme: {ThemeManager.CurrentTheme}"` inside `ApplyThemeColors()`.
+    - Implemented high-contrast color scheme for Light Mode in `RefreshCompanySettingsPreviewAsync`:
+      - Card Background: `Slate 50` (`#F8FAFC`) with `Slate 200` border (`#E2E8F0`).
+      - Company Name (`Hardik jari`): `Slate 900` (`#0F172A`) - bold, high-contrast dark text.
+      - Contact & Bank Details (`Phone`, `Email`, `Bank`, `IFSC`): `Slate 800` (`#1E293B`) - sharp dark text.
+      - Section Headers (`CONTACT INFORMATION`, `BANK & PAYMENT DETAILS`): `Slate 600` (`#475569`).
+      - Address: `Slate 500` (`#64748B`).
+      - Tagline & UPI ID: `Indigo 600` (`#4F46E5`).
+      - GSTIN: `Emerald 600` (`#059669`).
+    - Preserved crisp light typography and deep background (`#141722`) for Dark Mode.
+  - [`docs/TEST_REPORT.md`](file:///d:/sofwere/docs/TEST_REPORT.md):
+    - Documented `TR-20261025-005`.
+- **Verification & Test Status**:
+  - `dotnet build`: Succeeded (0 warnings, 0 errors).
+  - `dotnet test`: 101/101 PASSED (100% pass rate).
+- **Next Steps**:
+  - Run the application (`dotnet run`) to verify Settings page in both Light and Dark themes.
+  - Push branch to GitHub origin (`git push origin feature/sales-billing`).
+
 
 
 

@@ -62,6 +62,7 @@ namespace PROJECT_SBV1.Forms
         private RoundedPanel _pnlGrandTotal = null!;
         private ModernButton _btnSave = null!;
         private ModernButton _btnRecordPayment = null!;
+        private ModernButton _btnCompanyDetails = null!;
         private ModernButton _btnPreview = null!;
         private ModernButton _btnExport = null!;
         private ModernButton _btnClose = null!;
@@ -184,6 +185,29 @@ namespace PROJECT_SBV1.Forms
                 }
             };
             btnX += 150;
+
+            _btnCompanyDetails = new ModernButton
+            {
+                Text = "🏢 Company Info",
+                NormalColor = Color.FromArgb(55, 65, 81),
+                HoverColor = Color.FromArgb(75, 85, 99),
+                PressedColor = Color.FromArgb(31, 41, 55),
+                Size = new Size(130, 34),
+                Location = new Point(btnX, 15),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                BorderRadius = 8,
+                ForeColor = Color.White
+            };
+            _headerPanel.Controls.Add(_btnCompanyDetails);
+            _btnCompanyDetails.Click += async (s, e) =>
+            {
+                using var designer = new InvoiceDesignerForm();
+                if (designer.ShowDialog(this) == DialogResult.OK)
+                {
+                    _profile = await _billingService.GetBusinessProfileAsync();
+                }
+            };
+            btnX += 140;
 
             _btnPreview = new ModernButton
             {
@@ -1204,6 +1228,7 @@ namespace PROJECT_SBV1.Forms
 
             try
             {
+                _profile = await _billingService.GetBusinessProfileAsync();
                 string pdfPath = _pdfService.GenerateInvoicePdf(_invoice, _profile);
                 _pdfService.OpenPdf(pdfPath);
             }
@@ -1229,6 +1254,7 @@ namespace PROJECT_SBV1.Forms
             {
                 try
                 {
+                    _profile = await _billingService.GetBusinessProfileAsync();
                     _pdfService.GenerateInvoicePdf(_invoice, _profile, sfd.FileName);
                     var askOpen = MessageBox.Show($"PDF saved successfully to:\n{sfd.FileName}\n\nDo you want to open it now?", "Export Successful", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
                     if (askOpen == DialogResult.Yes)
@@ -1306,6 +1332,8 @@ namespace PROJECT_SBV1.Forms
             btnRight -= (120 + 10);
             _btnPreview.Location = new Point(btnRight - 125, 15);
             btnRight -= (125 + 10);
+            _btnCompanyDetails.Location = new Point(btnRight - 130, 15);
+            btnRight -= (130 + 10);
             _btnRecordPayment.Location = new Point(btnRight - 145, 15);
             btnRight -= (145 + 10);
             _btnSave.Location = new Point(btnRight - 130, 15);

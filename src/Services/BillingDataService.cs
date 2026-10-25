@@ -606,6 +606,35 @@ namespace PROJECT_SBV1.Services
             return await cmd.ExecuteNonQueryAsync() > 0;
         }
 
+        public async Task<bool> DeleteInvoiceAsync(int invoiceId)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+            using var trans = conn.BeginTransaction();
+            try
+            {
+                using var cmdItems = new SqliteCommand("DELETE FROM InvoiceItems WHERE InvoiceId = @id", conn, trans);
+                cmdItems.Parameters.AddWithValue("@id", invoiceId);
+                await cmdItems.ExecuteNonQueryAsync();
+
+                using var cmdPay = new SqliteCommand("DELETE FROM Payments WHERE InvoiceId = @id", conn, trans);
+                cmdPay.Parameters.AddWithValue("@id", invoiceId);
+                await cmdPay.ExecuteNonQueryAsync();
+
+                using var cmdInv = new SqliteCommand("DELETE FROM Invoices WHERE InvoiceId = @id", conn, trans);
+                cmdInv.Parameters.AddWithValue("@id", invoiceId);
+                int affected = await cmdInv.ExecuteNonQueryAsync();
+
+                trans.Commit();
+                return affected > 0;
+            }
+            catch
+            {
+                trans.Rollback();
+                throw;
+            }
+        }
+
         public async Task<bool> RecordPaymentAsync(Payment payment)
         {
             using var conn = new SqliteConnection(_connectionString);
@@ -864,9 +893,13 @@ namespace PROJECT_SBV1.Services
                     case "Email": profile.Email = val; break;
                     case "GSTIN": profile.GSTIN = val; break;
                     case "BankName": profile.BankName = val; break;
+                    case "BranchName": profile.BranchName = val; break;
                     case "AccountNumber": profile.AccountNumber = val; break;
                     case "IFSC": profile.IFSC = val; break;
                     case "UPIId": profile.UPIId = val; break;
+                    case "LogoPath": profile.LogoPath = val; break;
+                    case "AccentColorHex": profile.AccentColorHex = val; break;
+                    case "FooterNote": profile.FooterNote = val; break;
                     case "DefaultTerms": profile.DefaultTerms = val; break;
                 }
             }
@@ -893,9 +926,13 @@ namespace PROJECT_SBV1.Services
                 ["Email"] = profile.Email,
                 ["GSTIN"] = profile.GSTIN,
                 ["BankName"] = profile.BankName,
+                ["BranchName"] = profile.BranchName,
                 ["AccountNumber"] = profile.AccountNumber,
                 ["IFSC"] = profile.IFSC,
                 ["UPIId"] = profile.UPIId,
+                ["LogoPath"] = profile.LogoPath,
+                ["AccentColorHex"] = profile.AccentColorHex,
+                ["FooterNote"] = profile.FooterNote,
                 ["DefaultTerms"] = profile.DefaultTerms
             };
 
